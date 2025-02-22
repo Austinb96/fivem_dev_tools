@@ -1,8 +1,8 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "fivem_dev_tools",
-    "version": "0.1.0",
-    "identifier": "com.fivem_dev_tools.app",
+    "productName": "FiveM Dev Tools",
+    "version": "0.0.3",
+    "identifier": "com.fivemdevtools.app",
     "build": {
         "beforeDevCommand": "pnpm dev",
         "devUrl": "http://localhost:1420",
