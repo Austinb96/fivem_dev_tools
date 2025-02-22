@@ -6,7 +6,6 @@ use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
-use tauri_plugin_updater::UpdaterExt;
 use walkdir::WalkDir;
 
 static RE: Lazy<Regex> = Lazy::new(|| {
@@ -157,46 +156,9 @@ fn find_duplicate_files(path: String, filter: Vec<String>) -> Vec<(String, Vec<S
     results
 }
 
-async fn update(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
-    match app.updater()?.check().await {
-        Ok(Some(update)) => {
-            let mut downloaded = 0;
-            update
-                .download_and_install(
-                    |chunk_length, content_length| {
-                        downloaded += chunk_length;
-                        println!("downloaded {downloaded} from {content_length:?}");
-                    },
-                    || {
-                        println!("download finished");
-                    },
-                )
-                .await?;
-            println!("update installed");
-            app.restart();
-        }
-        Ok(None) => {
-            println!("no update available");
-        }
-        Err(e) => {
-            println!("error checking for updates: {e}");
-        }
-    }
-
-    Ok(())
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .setup(|app| {
-            let handle = app.handle().clone();
-
-            tauri::async_runtime::spawn(async move {
-                update(handle).await.unwrap();
-            });
-            Ok(())
-        })
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())

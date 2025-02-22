@@ -1,9 +1,11 @@
 <script lang="ts">
     import Navigation from "$lib/components/Navigation.svelte";
+    import Updater from "$lib/components/Updater.svelte";
 </script>
 
 
 <main id="container">
+    <Updater/>    
     <Navigation></Navigation>
     <div id="content">
         <slot/>
