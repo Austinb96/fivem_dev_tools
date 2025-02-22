@@ -34,7 +34,7 @@ function toggleSidebar() {
 	
     {#if !isCollapsed}
         <div id="version-info" class="text-center">
-            {#if !updater.update}
+            {#if updater.update}
                 <button class="update-available" onclick={() => updater.skip = false} title="Update available">
                     <span class="current">v{updater.current_version}</span>
                     <span class="new-version">(*v{updater.update.version})</span>
