@@ -78,11 +78,12 @@ function toggleSidebar() {
 		background: var(--primary-color);
 		color: white;
 		border: none;
-		padding: 10px;
 		border-radius: 4px;
 		cursor: pointer;
 		width: 100%;
-		height: 40px;
+        aspect-ratio: 1/1;
+        max-width: 400px;
+        max-height: 30px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -102,8 +103,7 @@ function toggleSidebar() {
 	.nav-item {
 		display: flex;
 		align-items: center;
-		gap: 10px;
-		padding: 10px;
+        margin: 15px 0;
 		color: var(--text-color);
 		font-size: 1rem;
 		border-radius: 5px;
