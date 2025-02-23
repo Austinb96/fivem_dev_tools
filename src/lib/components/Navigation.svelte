@@ -1,10 +1,8 @@
 <script lang="ts">
 import { goto } from "$app/navigation";
-import { getVersion } from "@tauri-apps/api/app";
 import { updater } from "../../updater.svelte";
 
-const VERSION = getVersion();
-let isCollapsed = false;
+let isCollapsed = true;
 
 // Define navigation links
 const navLinks = [
