@@ -16,7 +16,6 @@ class Updater {
         console.log("Current version: ", this.current_version);
     }
     
-    
     async check_update() {
         this.update = await check();
         this.current_version = await getVersion();
@@ -31,6 +30,7 @@ class Updater {
     
     async install(){
         if (!this.update) {
+            console.log("No update available");
             return;
         }
         

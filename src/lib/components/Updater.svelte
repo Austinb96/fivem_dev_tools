@@ -16,7 +16,7 @@
 					</div>
 					<p>{Math.round(updater.progress)}% downloaded</p>
 				{:else}
-					<button onclick={updater.install}>Install & Restart</button>
+					<button onclick={() => updater.install()}>Install & Restart</button>
 				{/if}
 			</div>
 		</div>
