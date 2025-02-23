@@ -50,14 +50,13 @@ fn collect_lua_files(dir: &Path) -> Vec<PathBuf> {
 }
 
 /// **Efficient file reading using BufReader**
-fn extract_vectors_from_file(file_path: &Path) -> Vec<VectorInfo> {
+fn extract_vectors_from_file(file_path: &Path, base_path: &Path) -> Vec<VectorInfo> {
     let file = match File::open(file_path) {
         Ok(file) => file,
         Err(_) => return Vec::new(), // Return empty vector instead of failing
     };
 
     let reader = BufReader::new(file);
-    let file_name = file_path.to_string_lossy().into_owned();
 
     reader
         .lines()
@@ -68,7 +67,7 @@ fn extract_vectors_from_file(file_path: &Path) -> Vec<VectorInfo> {
                 .and_then(parse_vector)
                 .map(|vector| VectorInfo {
                     vector,
-                    file: file_name.clone(),
+                    file: file_path.strip_prefix(base_path).unwrap().to_string_lossy().to_string(),
                     line_number: line_number + 1,
                 })
         })
@@ -79,7 +78,7 @@ fn extract_vectors_from_file(file_path: &Path) -> Vec<VectorInfo> {
 fn find_vectors_in_dir(dir: &Path) -> Vec<VectorInfo> {
     collect_lua_files(dir)
         .into_par_iter()
-        .flat_map(|path| extract_vectors_from_file(path.as_path()))
+        .flat_map(|path| extract_vectors_from_file(path.as_path(), dir))
         .collect()
 }
 

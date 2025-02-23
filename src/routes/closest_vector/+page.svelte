@@ -1,188 +1,244 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
     import { settings } from "../../settings.svelte";
+    import FolderNode from "$lib/components/FolderNode.svelte";
+    import type { FolderTree, VectorInfo } from "$types/types";
+    import FileNode from "$lib/components/FileNode.svelte";
 
-    type VectorInfo = {
-        vector: [number, number, number],
-        file: string,
-        line_number: number;
-    };
-    
-    type FolderTree = {
-        [name: string]: FolderTree | VectorInfo[];
-    };
-
-    let close_vectors: VectorInfo[] = $state([]);
-    let grouped_folders: FolderTree = $state({});
+    let formated_vectors: FolderTree = $state({ subfolders: {}, files: {} });
+    let filtered_vectors: FolderTree = $state({ subfolders: {}, files: {} });
     let vector: [number, number, number] = $state([0, 0, 0]);
     let dist: number = $state(1.0);
-    
+    let allOpen = $state(true);
+    let vectorType: number = $state(3);
+    let search_query: string = $state("");
+
     async function find_closest_vectors() {
-        if (dist < 0) {
-            dist = 0;
+        if (dist < 0) dist = 0;
+
+        let vectorToSend: number[];
+        if (vectorType === 2) {
+            vectorToSend = [vector[0], vector[1]]; // Send only X, Y
+        } else {
+            vectorToSend = [...vector]; // Send X, Y, Z
         }
-        close_vectors = await invoke("find_vectors_in_distance", { 
+
+        const close_vectors: VectorInfo[] = await invoke("find_vectors_in_distance", {
             path: settings.base_path,
-            v: vector,
-            dist: dist
+            v: vectorToSend,
+            dist: dist,
         });
 
-        grouped_folders = buildFolderTree(close_vectors);
+        formated_vectors = { subfolders: {}, files: {} };
 
-        console.log("Generated Folder Tree:", grouped_folders);
-    }
-    
-    function buildFolderTree(vectors: VectorInfo[]): FolderTree {
-        let tree: FolderTree = {};
-
-        for (const v of vectors) {
-            let parts = v.file.replace(/\\/g, "/").split("/"); // Normalize paths
-            let current = tree;
-
-            for (let i = 0; i < parts.length - 1; i++) {
-                let folder = parts[i];
-
-                if (!current[folder]) {
-                    current[folder] = {};
+        for (let i = 0; i < close_vectors.length; i++) {
+            const path = close_vectors[i].file;
+            const path_parts = path.split("\\");
+            let current_folder = formated_vectors;
+            for (let j = 0; j < path_parts.length - 1; j++) {
+                if (!current_folder.subfolders[path_parts[j]]) {
+                    current_folder.subfolders[path_parts[j]] = {
+                        subfolders: {},
+                        files: {},
+                    };
                 }
-
-                current = current[folder] as FolderTree;
+                current_folder = current_folder.subfolders[path_parts[j]];
             }
-
-            let file = parts[parts.length - 1];
-            if (!current[file]) {
-                current[file] = [];
+            if (!current_folder.files[path_parts[path_parts.length - 1]]) {
+                current_folder.files[path_parts[path_parts.length - 1]] = [];
             }
-
-            (current[file] as VectorInfo[]).push(v);
+            current_folder.files[path_parts[path_parts.length - 1]].push(
+                close_vectors[i],
+            );
         }
 
-        // Sort everything
-        function sortTree(tree: FolderTree) {
-            for (const key in tree) {
-                if (Array.isArray(tree[key])) {
-                    (tree[key] as VectorInfo[]).sort((a, b) => a.line_number - b.line_number);
-                } else {
-                    sortTree(tree[key] as FolderTree);
+        filter_results();
+    }
+
+    function filter_results() {
+        if (!search_query) {
+            filtered_vectors = formated_vectors;
+            return;
+        }
+
+        function recursiveFilter(node: FolderTree): FolderTree {
+            let filteredNode: FolderTree = { subfolders: {}, files: {} };
+
+            // Filter files
+            for (const [fileName, vectors] of Object.entries(node.files)) {
+                if (fileName.toLowerCase().includes(search_query.toLowerCase())) {
+                    filteredNode.files[fileName] = vectors;
                 }
             }
+
+            // Filter subfolders recursively
+            for (const [folderName, subfolder] of Object.entries(node.subfolders)) {
+                const filteredSubfolder = recursiveFilter(subfolder);
+                if (
+                    folderName.toLowerCase().includes(search_query.toLowerCase()) ||
+                    Object.keys(filteredSubfolder.subfolders).length > 0 ||
+                    Object.keys(filteredSubfolder.files).length > 0
+                ) {
+                    filteredNode.subfolders[folderName] = filteredSubfolder;
+                }
+            }
+
+            return filteredNode;
         }
 
-        sortTree(tree);
-        return tree;
+        filtered_vectors = recursiveFilter(formated_vectors);
     }
 
-    
-    function isVectorArray(value: any): value is VectorInfo[] {
-        return Array.isArray(value) && value.length > 0 && typeof value[0] === "object";
-    }
-    function renderTree(node) {
-        if (Array.isArray(node)) {
-            return node
-                .map(
-                    (v) => `
-                    <li class="vector-item">
-                        <span class="vector-data">${JSON.stringify(v.vector)} : ${v.line_number}</span>
-                    </li>`
-                )
-                .join("");
-        }
-        return Object.entries(node)
-            .map(
-                ([key, value]) => `
-                <details open class="folder">
-                    <summary>📂 ${key}</summary>
-                    <ul class="folder-content">
-                        ${renderTree(value)}
-                    </ul>
-                </details>`
-            )
-            .join("");
-
-    }
 </script>
 
-
-<div class="search-box">
-    <form onsubmit={find_closest_vectors}>
-        <div class="inputs">
-            <input type="number" bind:value={vector[0]} placeholder="X" />
-            <input type="number" bind:value={vector[1]} placeholder="Y" />
-            <input type="number" bind:value={vector[2]} placeholder="Z" />
-            <input type="number" bind:value={dist} placeholder="Distance" />
+<div class="controls">
+    <div class="vector-settings">
+        <div class="vector-toggle">
+            <button class:active={vectorType === 2} onclick={() => vectorType = 2}>Vector2</button>
+            <button class:active={vectorType === 3} onclick={() => vectorType = 3}>Vector3</button>
         </div>
-        <button type="submit">🔍 Find Closest Vectors</button>
-    </form>
+    </div>
+
+    <div class="vector-inputs">
+        <div class="vector-fields">
+            <input type="number" step="0.01" bind:value={vector[0]} placeholder="X" />
+            <input type="number" step="0.01" bind:value={vector[1]} placeholder="Y" />
+            {#if vectorType === 3}
+                <input type="number" step="0.01" bind:value={vector[2]} placeholder="Z"/>
+            {/if}
+        </div>
+        dist:<input type="number" step="0.01" bind:value={dist} placeholder="Distance" class="distance-input" />
+    </div>
+
+    <button class="search-btn" onclick={find_closest_vectors}>🔍</button>
+</div>
+
+<div class="folder-actions">
+    {#if Object.keys(formated_vectors.subfolders).length > 0 || Object.keys(formated_vectors.files).length > 0}
+        {#if allOpen}
+            <button onclick={() => allOpen = false}>📁 Collapse All</button>
+        {:else}
+            <button onclick={() => allOpen = true}>📂 Expand All</button>
+        {/if}
+        <input class="search-box" type="text" placeholder="Search" bind:value={search_query} oninput={filter_results} />
+    {/if}
 </div>
 
 <ul class="folder-tree">
-    {#each Object.entries(grouped_folders) as [folder, content]}
-        {#if isVectorArray(content)}
-            <!-- Render file with vectors -->
-            <ul class="file-list">
-                {#each content as v}
-                    <li class="vector-item">
-                        <a href={`file://${v.file}:${v.line_number}`} class="line-link">
-                            📄 {v.file} <span class="line-num">Line {v.line_number}</span>
-                        </a>
-                        <span class="vector-data">{JSON.stringify(v.vector)}</span>
-                    </li>
-                {/each}
-            </ul>
-        {:else}
-            <!-- Render nested folders recursively -->
-            {#each Object.entries(content) as [subfolder, subcontent]}
-                <details open class="folder">
-                    <summary>📂 {subfolder}</summary>
-                    <ul class="folder-content">
-                        {@html renderTree(subcontent)}
-                    </ul>
-                </details>
-            {/each}
-        {/if}
+    {#each Object.entries(filtered_vectors.subfolders) as [folderName, content]}
+        <FolderNode name={folderName} content={content} bind:allOpen={allOpen} />
+    {/each}
+
+    {#each Object.entries(filtered_vectors.files) as [fileName, vectors]}
+        <FileNode name={fileName} vectors={vectors} />
     {/each}
 </ul>
 
-
 <style>
-    * {
-        font-family: Arial, sans-serif;
-        box-sizing: border-box;
-    }
-
-    .search-box {
-        margin-bottom: 20px;
-        padding: 10px;
+    .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        align-items: center;
+        padding: 15px;
         background: #313244;
         border-radius: 8px;
+        margin-bottom: 15px;
     }
 
-    .inputs {
+    .vector-settings {
         display: flex;
+        align-items: center;
         gap: 10px;
     }
 
+    .vector-toggle {
+        display: flex;
+        gap: 5px;
+    }
+
+    .vector-toggle button {
+        padding: 6px 12px;
+        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+        background: #585b70;
+        color: white;
+        transition: 0.2s;
+    }
+
+    .vector-toggle button.active {
+        background: #89b4fa;
+    }
+
+    .vector-toggle button:hover {
+        background: #74c7ec;
+    }
+
+    .vector-inputs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .vector-fields {
+        display: flex;
+        gap: 8px;
+    }
+
     input {
-        padding: 8px;
+        padding: 2px;
         border: none;
         border-radius: 4px;
         background: #45475a;
         color: #f8f8f2;
+        width: 80px;
+        text-align: center;
+    }
+
+    .distance-input {
         width: 100px;
     }
 
-    button {
+    .search-btn {
         padding: 10px 15px;
         background: #f7768e;
         color: white;
         border: none;
         cursor: pointer;
         border-radius: 4px;
-        margin-top: 10px;
     }
 
-    button:hover {
+    .search-btn:hover {
         background: #ff9e64;
+    }
+
+    .folder-actions {
+        margin-bottom: 10px;
+    }
+
+    .folder-actions button {
+        margin-right: 10px;
+        padding: 8px 12px;
+        border: none;
+        cursor: pointer;
+        border-radius: 4px;
+        background: #89b4fa;
+        color: white;
+    }
+
+    .folder-actions button:hover {
+        background: #74c7ec;
+    }
+    
+    .search-box {
+        padding: 5px;
+        border: none;
+        border-radius: 4px;
+        background: #45475a;
+        color: #f8f8f2;
+        width: 200px;
     }
 
     .folder-tree {
@@ -190,56 +246,9 @@
         padding-left: 0;
     }
 
-    .folder summary {
-        font-weight: bold;
-        padding: 5px;
-        cursor: pointer;
-        background: #313244;
-        color: #fab387;
-        border-radius: 4px;
-        margin-bottom: 5px;
-    }
-
-    .folder-content {
-        list-style: none;
-        padding-left: 20px;
-    }
-
-    .file-list {
-        list-style: none;
-        padding-left: 20px;
-    }
-
-    .vector-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        background: #45475a;
-        padding: 6px;
-        border-radius: 4px;
-        margin-bottom: 5px;
-    }
-
-    .line-link {
-        font-weight: bold;
-        color: #89b4fa;
-        text-decoration: none;
-    }
-
-    .line-link:hover {
-        text-decoration: underline;
-    }
-
-    .line-num {
-        color: #94e2d5;
-        font-weight: bold;
-    }
-
-    .vector-data {
-        font-size: 0.9em;
-        color: #bac2de;
-        background: #585b70;
-        padding: 3px 6px;
-        border-radius: 4px;
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
     }
 </style>
