@@ -1,6 +1,6 @@
 [package]
 name = "fivem_dev_tools"
-version = "0.0.10"
+version = "0.0.11"
 description = "Dev Tools for FiveM"
 authors = ["Zero"]
 edition = "2021"
