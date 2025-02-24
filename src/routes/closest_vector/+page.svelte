@@ -12,11 +12,14 @@
     let allOpen = $state(true);
     let vectorType: number = $state(3);
     let search_query: string = $state("");
+    let loading = $state();
 
     async function find_closest_vectors() {
+        loading = true;
         if (dist < 0) dist = 0;
 
         let vectorToSend: number[];
+        
         if (vectorType === 2) {
             vectorToSend = [vector[0], vector[1]]; // Send only X, Y
         } else {
@@ -28,6 +31,8 @@
             v: vectorToSend,
             dist: dist,
         });
+        
+        console.log(close_vectors);
 
         formated_vectors = { subfolders: {}, files: {} };
 
@@ -53,6 +58,8 @@
         }
 
         filter_results();
+        
+        loading = false
     }
 
     function filter_results() {
@@ -125,6 +132,9 @@
 </div>
 
 <ul class="folder-tree">
+    {#if loading == true} 
+        <p>Loading...</p>
+    {/if}
     {#each Object.entries(filtered_vectors.subfolders) as [folderName, content]}
         <FolderNode name={folderName} content={content} bind:allOpen={allOpen} />
     {/each}
