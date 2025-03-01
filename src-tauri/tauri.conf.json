@@ -1,47 +1,51 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
-  "productName": "FiveM Dev Tools",
-  "version": "0.0.14",
-  "identifier": "com.fivemdevtools.app",
-  "build": {
-    "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../build"
-  },
-  "app": {
-    "windows": [
-      {
-        "title": "fivem_dev_tools",
-        "width": 800,
-        "height": 600
-      }
-    ],
-    "security": {
-      "csp": null
+    "$schema": "https://schema.tauri.app/config/2",
+    "productName": "FiveM Dev Tools",
+    "version": "0.0.14",
+    "identifier": "com.fivemdevtools.app",
+    "build": {
+        "beforeDevCommand": "pnpm dev",
+        "devUrl": "http://localhost:1420",
+        "beforeBuildCommand": "pnpm build",
+        "frontendDist": "../build"
+    },
+    "app": {
+        "windows": [
+            {
+                "title": "fivem_dev_tools",
+                "width": 800,
+                "height": 600
+            }
+        ],
+        "security": {
+            "csp": null
+        }
+    },
+    "bundle": {
+        "active": true,
+        "targets": "all",
+        "icon": [
+            "icons/32x32.png",
+            "icons/128x128.png",
+            "icons/128x128@2x.png",
+            "icons/icon.icns",
+            "icons/icon.ico"
+        ],
+        "createUpdaterArtifacts": true,
+        "resources": [
+            "CodeWalkerCli.exe",
+            "CodeWalker.Core.dll"
+        ]
+    },
+    "plugins": {
+        "updater": {
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE1NEEyRkY1ODg0N0VBN0MKUldSODZrZUk5UzlLcGJ2YlhaTVNnREJRYmYxbXZoS2pqYjhzcDVDWkdCeGs0Q1JzSzdER2hvRE8K",
+            "endpoints": [
+                "https://github.com/Austinb96/fivem_dev_tools/releases/latest/download/latest.json"
+            ],
+            "windows": {
+                "installMode": "passive"
+            }
+        }
     }
-  },
-  "bundle": {
-    "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ],
-    "createUpdaterArtifacts": true
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE1NEEyRkY1ODg0N0VBN0MKUldSODZrZUk5UzlLcGJ2YlhaTVNnREJRYmYxbXZoS2pqYjhzcDVDWkdCeGs0Q1JzSzdER2hvRE8K",
-      "endpoints": [
-        "https://github.com/Austinb96/fivem_dev_tools/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "passive"
-      }
-    }
-  }
 }
