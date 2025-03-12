@@ -32,8 +32,6 @@
             dist: dist,
         });
         
-        console.log(close_vectors);
-
         formated_vectors = { subfolders: {}, files: {} };
 
         for (let i = 0; i < close_vectors.length; i++) {
@@ -95,7 +93,6 @@
 
         filtered_vectors = recursiveFilter(formated_vectors);
     }
-
 </script>
 
 <div class="controls">
