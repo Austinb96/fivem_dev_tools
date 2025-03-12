@@ -1,6 +1,7 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
     import { settings } from "../../settings.svelte";
+    import { SUPPORTED_META, diffTool } from "../../diffEditor.svelte";
 
     type DuplicateFileEntry = [string, string[]];
     
@@ -19,11 +20,10 @@
         ytd: true,
         ytyp: true,
         ymt: true,
-        occl: true, 
-        lodlights: true
     });
 
     async function find_duplicate_files() {
+        const start_time = performance.now();
         loading = true;
         const active_filters: string[] = Object.entries(filters)
             .filter(([_, value]) => value)
@@ -38,6 +38,8 @@
         expandedFile = null;
         loading = false;
         filter_results();
+        
+        console.log("Time taken:", performance.now() - start_time);
     }
 
     function toggleExpand(file: string) {
@@ -90,13 +92,23 @@
 {#if filtered_files.length > 0}
     <div class="file-list">
         {#each filtered_files as [file, paths]}
-            {#if filters[file.split(".").pop()]}
+            {#if filters[file.split(".").pop() || ""]}
                 <div class="file-card">
                     <button class="file-header" onclick={() => toggleExpand(file)} aria-expanded={expandedFile === file} type="button">
                         <h2>{file}</h2>
                         <span class="arrow">{expandedFile === file ? "▲" : "▼"}</span>
                     </button>
                     {#if expandedFile === file}
+                        {#if SUPPORTED_META[file.split(".").pop() || ""]}
+                            <div class="actions-container">
+                                <button 
+                                    class="action-btn compare-btn"
+                                    onclick={() => diffTool.open_page_with_files(settings.base_path+"/"+paths[0], settings.base_path+"/"+paths[1])}
+                                > 
+                                    Compare
+                                </button>
+                            </div>
+                        {/if}
                         <ul class="path-list">
                             {#each paths as path}
                                 <li>{path}</li>
@@ -194,9 +206,9 @@
     .path-list {
         list-style-type: none;
         padding: 10px;
-        margin: 5px 0 0;
+        margin: 0;
         background: #45475a;
-        border-radius: 5px;
+        border-radius: 0 0 5px 5px;
         max-height: 150px;
         overflow-y: auto;
         font-size: 12px;
@@ -283,5 +295,33 @@
         background: #45475a;
         color: #f8f8f2;
         width: 200px;
+    }
+
+    .actions-container {
+        padding: 4px 8px;
+        display: flex;
+        background: #313244;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .action-btn {
+        display: inline-flex;
+        align-items: center;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 4px;
+        transition: background 0.2s ease;
+        font-weight: 500;
+        line-height: 1;
+    }
+
+    .compare-btn {
+        background: #89b4fa;
+        color: #1e1e2e;
+        border: none;
+    }
+
+    .compare-btn:hover {
+        background: #b4befe;
     }
 </style>
