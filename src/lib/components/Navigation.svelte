@@ -8,6 +8,7 @@ let isCollapsed = true;
 const navLinks = [
 	{ name: "Find Vector", path: "/closest_vector", icon: "🔍" },
 	{ name: "Duplicate Files", path: "/duplicate_files", icon: "📂" },
+    { name: "Diff Tool" , path: "/diff_editor", icon: "🔧" },
 	{ name: "Settings", path: "/settings", icon: "⚙️" },
 ];
 
