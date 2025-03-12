@@ -1,14 +1,14 @@
-
-use dashmap::DashMap;
-use rayon::prelude::*;
-use walkdir::WalkDir;
-use std::ffi::OsStr;
-use std::path::Path;
-use utils::vector::{self, VectorInfo, find_vectors_in_dir};
-
-mod utils{
+mod utils {
+    pub mod codewalkercli;
+    pub mod files;
     pub mod vector;
 }
+
+use rayon::prelude::*;
+use std::path::Path;
+use utils::codewalkercli::{send_command, start_codewalker, stop_codewalker};
+use utils::files::{collect_files, collect_tables, filter_duplicates, get_paths_in_dir, read_file, write_file, delete_file};
+use utils::vector::{self, find_vectors_in_dir, VectorInfo};
 
 #[tauri::command]
 fn find_vectors_in_distance(path: String, v: Vec<f32>, dist: f32) -> Vec<VectorInfo> {
@@ -17,7 +17,7 @@ fn find_vectors_in_distance(path: String, v: Vec<f32>, dist: f32) -> Vec<VectorI
         return Vec::new();
     }
     let search_path = Path::new(&path);
-    
+
     find_vectors_in_dir(search_path)
         .into_par_iter()
         .filter_map(|vec_info| {
@@ -34,68 +34,43 @@ fn find_vectors_in_distance(path: String, v: Vec<f32>, dist: f32) -> Vec<VectorI
         .collect()
 }
 
-
 #[tauri::command]
 fn find_duplicate_files(path: String, filter: Vec<String>) -> Vec<(String, Vec<String>)> {
     if path.is_empty() {
         return Vec::new();
     }
-    let search_path = Path::new(&path);
-    let file_map = DashMap::new();
-    WalkDir::new(search_path)
-        .into_iter()
-        .par_bridge()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_file()) // Skip directories
-        .filter_map(|entry| {
-            let path = entry.path();
-            let file_name = path.file_name()?.to_str()?;
-            let file_path = path.strip_prefix(search_path).ok()?.to_string_lossy();
-
-            // Check extension filter
-            if filter.is_empty()
-                || filter
-                    .iter()
-                    .any(|ext| path.extension().and_then(OsStr::to_str) == Some(ext))
-            {
-                Some((file_name.to_string(), file_path.to_string()))
-            } else {
-                None
-            }
-        })
-        .for_each(|(file_name, file_path)| {
-            file_map
-                .entry(file_name)
-                .or_insert_with(Vec::new)
-                .push(file_path);
-        });
-
-    let mut results: Vec<(String, Vec<String>)> = file_map
-        .into_iter()
-        .filter(|(_, paths)| paths.len() > 1)
-        .collect();
-
-    // Sort the results by file name
-    results.sort_by(|a, b| a.0.cmp(&b.0));
-
-    // Also sort paths inside each entry
-    for (_, paths) in &mut results {
-        paths.sort();
-    }
-
-    results
+    filter_duplicates(collect_files(Path::new(&path), &filter))
 }
 
+#[tauri::command]
+fn get_lua_tables(path: String, table_filter: Vec<String>) -> Vec<String> {
+    if path.is_empty() {
+        return Vec::new();
+    }
+    collect_tables(Path::new(&path), table_filter).unwrap_or_default()
+}
+
+// Main application setup
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             find_vectors_in_distance,
-            find_duplicate_files
+            find_duplicate_files,
+            get_lua_tables,
+            send_command,
+            stop_codewalker,
+            start_codewalker,
+            get_paths_in_dir,
+            read_file,
+            write_file,
+            delete_file
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
