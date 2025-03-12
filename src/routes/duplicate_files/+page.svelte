@@ -2,6 +2,7 @@
     import { invoke } from "@tauri-apps/api/core";
     import { settings } from "../../settings.svelte";
     import { SUPPORTED_META, diffTool } from "../../diffEditor.svelte";
+    import { toast } from "../../toast.svelte";
 
     type DuplicateFileEntry = [string, string[]];
     
@@ -103,15 +104,23 @@
                             <div class="actions-container">
                                 <button 
                                     class="action-btn compare-btn"
-                                    onclick={() => diffTool.open_page_with_files(settings.base_path+"/"+paths[0], settings.base_path+"/"+paths[1])}
+                                    onclick={() => {
+                                        if (!paths[0] || !paths[1]){
+                                            toast.add({
+                                                text: "Cannot compare files. One or more files are missing.",
+                                                type: "error"
+                                            })
+                                        }
+                                        diffTool.open_page_with_files(`${settings.base_path}/${paths[0]}`, `${settings.base_path}/${paths[1]}`)
+                                    }}
                                 > 
                                     Compare
                                 </button>
                             </div>
                         {/if}
                         <ul class="path-list">
-                            {#each paths as path}
-                                <li>{path}</li>
+                            {#each paths as path, i}
+                                <li>[{i}]: {path}</li>
                             {/each}
                         </ul>
                     {/if}

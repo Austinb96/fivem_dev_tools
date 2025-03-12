@@ -116,212 +116,219 @@
         </button>
     {/if}
     
-    <div class="tabs">
-        <button 
-            class:active={active_tab === 'diff'} 
-            onclick={() => active_tab = 'diff'}
-        >
-            Differences
-        </button>
-        <button 
-            class:active={active_tab === 'result'} 
-            onclick={() => {
-                active_tab = 'result';
-                diffTool.generate_result();
-            }}
-        > 
-            Output
-        </button>
-    </div>
-    
-    {#if active_tab === 'diff' && diffTool.grouped_diff.length > 0}
-        <div class="diff-viewer">
-            <div class="diff-controls">
+    {#if diffTool.loading}
+        <p class="loading">Loading...</p>
+    {:else}
+        {#if diffTool.xml[0].file_path && diffTool.xml[1].file_path}
+            <div class="tabs">
                 <button 
-                    class="toggle-button added"
-                    onclick={() => diffTool.toggle_all_added(true)}
+                    class:active={active_tab === 'diff'} 
+                    onclick={() => active_tab = 'diff'}
                 >
-                    Select All File1
+                    Differences
                 </button>
                 <button 
-                    class="toggle-button added"
-                    onclick={() => diffTool.toggle_all_added(false)}
-                >
-                    Deselect All File1
-                </button>
-                <button 
-                    class="toggle-button removed"
-                    onclick={() => diffTool.toggle_all_removed(true)}
-                >
-                    Select All File2
-                </button>
-                <button 
-                    class="toggle-button removed"
-                    onclick={() => diffTool.toggle_all_removed(false)}
-                >
-                    Deselect All File2
+                    class:active={active_tab === 'result'} 
+                    onclick={() => {
+                        active_tab = 'result';
+                        diffTool.generate_result();
+                    }}
+                > 
+                    Output
                 </button>
             </div>
-            {#each diffTool.grouped_diff as group, groupIndex}
-                <div class="diff-group">
-                    <div 
-                        role="button"
-                        tabindex="0"
-                        onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && diffTool.toggle_group(groupIndex)}
-                        class="diff-header"
-                        onclick={() => diffTool.toggle_group(groupIndex)}
+        {/if}
+            
+        {#if active_tab === 'diff' && diffTool.grouped_diff.length > 0}
+            <div class="diff-viewer">
+                <div class="diff-controls">
+                    <button 
+                        class="toggle-button added"
+                        onclick={() => diffTool.toggle_all_added(true)}
                     >
-                        <span class="expand-icon">{group.isExpanded ? '▼' : '▶'}</span>
-                        <span>Changes around {group.startLine + 1}</span>
-                    </div>
-
-                    {#if group.isExpanded}
-                        <div class="chunk-controls">
-                            <button 
-                                class="toggle-button added"
-                                onclick={() => diffTool.toggle_chunk_added(groupIndex, true)}
-                            >
-                                Select File1
-                            </button>
-                            <button 
-                                class="toggle-button added"
-                                onclick={() => diffTool.toggle_chunk_added(groupIndex, false)}
-                            >
-                                Deselect File1
-                            </button>
-                            <button 
-                                class="toggle-button removed"
-                                onclick={() => diffTool.toggle_chunk_removed(groupIndex, true)}
-                            >
-                                Select File2
-                            </button>
-                            <button 
-                                class="toggle-button removed"
-                                onclick={() => diffTool.toggle_chunk_removed(groupIndex, false)}
-                            >
-                                Deselect File2
-                            </button>
+                        Select All File1
+                    </button>
+                    <button 
+                        class="toggle-button added"
+                        onclick={() => diffTool.toggle_all_added(false)}
+                    >
+                        Deselect All File1
+                    </button>
+                    <button 
+                        class="toggle-button removed"
+                        onclick={() => diffTool.toggle_all_removed(true)}
+                    >
+                        Select All File2
+                    </button>
+                    <button 
+                        class="toggle-button removed"
+                        onclick={() => diffTool.toggle_all_removed(false)}
+                    >
+                        Deselect All File2
+                    </button>
+                </div>
+                {#each diffTool.grouped_diff as group, groupIndex}
+                    <div class="diff-group">
+                        <div 
+                            role="button"
+                            tabindex="0"
+                            onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && diffTool.toggle_group(groupIndex)}
+                            class="diff-header"
+                            onclick={() => diffTool.toggle_group(groupIndex)}
+                        >
+                            <span class="expand-icon">{group.isExpanded ? '▼' : '▶'}</span>
+                            <span>Changes around {group.startLine + 1}</span>
                         </div>
-                        {#each group.lines as line}
-                            <div 
-                                onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && diffTool.toggle_selected_line(line)}
-                                role="button"
-                                tabindex="0"
-                                class="diff-line {line.type}"
-                                class:selected={line.selected && (line.type === 'added' || line.type === 'removed')}
-                                class:clickable={line.type === 'added' || line.type === 'removed'}
-                                onclick={() => line.type !== 'context' && diffTool.toggle_selected_line(line)}
-                            >
-                                {#if line.type === 'added' || line.type === 'removed'}
+
+                        {#if group.isExpanded}
+                            <div class="chunk-controls">
+                                <button 
+                                    class="toggle-button added"
+                                    onclick={() => diffTool.toggle_chunk_added(groupIndex, true)}
+                                >
+                                    Select File1
+                                </button>
+                                <button 
+                                    class="toggle-button added"
+                                    onclick={() => diffTool.toggle_chunk_added(groupIndex, false)}
+                                >
+                                    Deselect File1
+                                </button>
+                                <button 
+                                    class="toggle-button removed"
+                                    onclick={() => diffTool.toggle_chunk_removed(groupIndex, true)}
+                                >
+                                    Select File2
+                                </button>
+                                <button 
+                                    class="toggle-button removed"
+                                    onclick={() => diffTool.toggle_chunk_removed(groupIndex, false)}
+                                >
+                                    Deselect File2
+                                </button>
+                            </div>
+                            {#each group.lines as line}
+                                <div 
+                                    onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && diffTool.toggle_selected_line(line)}
+                                    role="button"
+                                    tabindex="0"
+                                    class="diff-line {line.type}"
+                                    class:selected={line.selected && (line.type === 'added' || line.type === 'removed')}
+                                    class:clickable={line.type === 'added' || line.type === 'removed'}
+                                    onclick={() => line.type !== 'context' && diffTool.toggle_selected_line(line)}
+                                >
+                                    {#if line.type === 'added' || line.type === 'removed'}
+                                        <input 
+                                            type="checkbox" 
+                                            checked={line.selected} 
+                                            onchange={() => diffTool.toggle_selected_line(line)}
+                                        />
+                                    {:else}
+                                        <span class="checkbox-placeholder"></span>
+                                    {/if}
+                                    <span class="line-prefix">
+                                        {#if line.type === 'added'}+
+                                        {:else if line.type === 'removed'}-
+                                        {:else}&nbsp;{/if}
+                                        {line.lineNumber || ' '}
+                                    </span>
+                                    <pre>{line.content}</pre>
+                                </div>
+                            {/each}
+                        {:else}
+                            <div class="collapsed-summary">
+                                <span>{group.lines.length} changed lines</span>
+                                <span>{group.lines.filter(l => l.type === 'added').length} additions</span>
+                                <span>{group.lines.filter(l => l.type === 'removed').length} deletions</span>
+                            </div>
+                        {/if}
+                    </div>
+                {/each}
+
+            </div>
+        {:else if active_tab === 'result' && diffTool.result}
+            <div class="diff-viewer">
+                <div class="code-editor">
+                    <div class="save-container">
+                        <div class="save-options">
+                            <select bind:value={diffTool.save_options.mode}>
+                                <option value="new_location">Save to New Location</option>
+                                <option value="replace_file1">Replace File 1</option>
+                                <option value="replace_file2">Replace File 2</option>
+                                <option value="replace_both">Replace Both Files</option>
+                            </select>
+                            
+                            {#if diffTool.save_options.mode === 'new_location'}
+                                <input 
+                                    type="text" 
+                                    placeholder="Output path" 
+                                    bind:value={diffTool.output_path}
+                                    class="file-path"
+                                />
+                                <button 
+                                    class="browse-btn"
+                                    onclick={handleFileOutput}
+                                >
+                                    Browse
+                                </button>
+                            {/if}
+                            
+                            {#if diffTool.save_options.mode === 'replace_file2'}
+                                <label>
                                     <input 
                                         type="checkbox" 
-                                        checked={line.selected} 
-                                        onchange={() => diffTool.toggle_selected_line(line)}
+                                        bind:checked={diffTool.save_options.delete_file1}
                                     />
-                                {:else}
-                                    <span class="checkbox-placeholder"></span>
-                                {/if}
-                                <span class="line-prefix">
-                                    {#if line.type === 'added'}+
-                                    {:else if line.type === 'removed'}-
-                                    {:else}&nbsp;{/if}
-                                    {line.lineNumber || ' '}
-                                </span>
-                                <pre>{line.content}</pre>
-                            </div>
-                        {/each}
-                    {:else}
-                        <div class="collapsed-summary">
-                            <span>{group.lines.length} changed lines</span>
-                            <span>{group.lines.filter(l => l.type === 'added').length} additions</span>
-                            <span>{group.lines.filter(l => l.type === 'removed').length} deletions</span>
+                                    Delete File 1 after save
+                                </label>
+                            {/if}
+                            {#if diffTool.save_options.mode === 'replace_file1'}
+                                <label>
+                                    <input 
+                                        type="checkbox" 
+                                        bind:checked={diffTool.save_options.delete_file2}
+                                    />
+                                    Delete File 2 after save
+                                </label>
+                            {/if}
                         </div>
-                    {/if}
-                </div>
-            {/each}
 
-        </div>
-    {:else if active_tab === 'result' && diffTool.result}
-        <div class="diff-viewer">
-            <div class="code-editor">
-                <div class="save-container">
-                    <div class="save-options">
-                        <select bind:value={diffTool.save_options.mode}>
-                            <option value="new_location">Save to New Location</option>
-                            <option value="replace_file1">Replace File 1</option>
-                            <option value="replace_file2">Replace File 2</option>
-                            <option value="replace_both">Replace Both Files</option>
-                        </select>
-                        
-                        {#if diffTool.save_options.mode === 'new_location'}
-                            <input 
-                                type="text" 
-                                placeholder="Output path" 
-                                bind:value={diffTool.output_path}
-                                class="file-path"
-                            />
+                        <div class="save-actions">
                             <button 
-                                class="browse-btn"
-                                onclick={handleFileOutput}
+                                class="save-btn download"
+                                onclick={() => diffTool.download_result()}
                             >
-                                Browse
+                                Download
                             </button>
-                        {/if}
-                        
-                        {#if diffTool.save_options.mode === 'replace_file2'}
-                            <label>
-                                <input 
-                                    type="checkbox" 
-                                    bind:checked={diffTool.save_options.delete_file1}
-                                />
-                                Delete File 1 after save
-                            </label>
-                        {/if}
-                        {#if diffTool.save_options.mode === 'replace_file1'}
-                            <label>
-                                <input 
-                                    type="checkbox" 
-                                    bind:checked={diffTool.save_options.delete_file2}
-                                />
-                                Delete File 2 after save
-                            </label>
-                        {/if}
+                            <button 
+                                class="save-btn"
+                                onclick={() => diffTool.save_result()}
+                                disabled={!diffTool.output_path && diffTool.save_options.mode === 'new_location'}
+                            >
+                                Save
+                            </button>
+                        </div>
                     </div>
-
-                    <div class="save-actions">
-                        <button 
-                            class="save-btn download"
-                            onclick={() => diffTool.download_result()}
-                        >
-                            Download
-                        </button>
-                        <button 
-                            class="save-btn"
-                            onclick={() => diffTool.save_result()}
-                            disabled={!diffTool.output_path && diffTool.save_options.mode === 'new_location'}
-                        >
-                            Save
-                        </button>
-                    </div>
-                </div>
-                <div class="code-content">
-                    <div class="line-numbers">
-                        {#each diffTool.result.split('\n') as _, i}
-                            <div class="line-number">{i + 1}</div>
-                        {/each}
-                    </div>
-                    <div class="editor-content">
-                        <textarea 
-                            spellcheck="false"
-                            bind:value={diffTool.result}
-                            rows={diffTool.result.split('\n').length}
-                        ></textarea>
+                    <div class="code-content">
+                        <div class="line-numbers">
+                            {#each diffTool.result.split('\n') as _, i}
+                                <div class="line-number">{i + 1}</div>
+                            {/each}
+                        </div>
+                        <div class="editor-content">
+                            <textarea 
+                                spellcheck="false"
+                                bind:value={diffTool.result}
+                                rows={diffTool.result.split('\n').length}
+                            ></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        {/if}
     {/if}
 </div>
+    
         
 <style>
     .editors {

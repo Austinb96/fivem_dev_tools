@@ -12,7 +12,7 @@ class Toast {
         this.messages.push(message);
         setTimeout(() => {
             this.remove(this.messages.indexOf(message));
-        }, message.duration || 3000);
+        }, message.duration || 5000);
     }
     
     remove(index: number) {

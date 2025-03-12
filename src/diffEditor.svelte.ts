@@ -21,137 +21,150 @@ interface DiffGroup {
 	isExpanded: boolean;
 }
 type XMLData = {
-    xml: string;
-    file_path: string;
-    file_name: string;
-}
+	xml: string;
+	file_path: string;
+	file_name: string;
+};
 
 export const SUPPORTED_META: Record<string, boolean> = {
-    "xml": true,
-    "ymap": true,
-    "ytyp": true,
-    "ydr": true,
-}
+	xml: true,
+	ymap: true,
+	ytyp: true,
+	ydr: true,
+};
 
 interface SaveOptions {
-    mode: 'replace_file1' | 'replace_file2' | 'new_location' | 'replace_both';
-    delete_file1?: boolean;
-    delete_file2?: boolean;
+	mode: "replace_file1" | "replace_file2" | "new_location" | "replace_both";
+	delete_file1?: boolean;
+	delete_file2?: boolean;
 }
 
 class DiffTool {
 	xml: XMLData[] = $state([
-        { file_path: "", xml: "" , file_name: ""},
-        { file_path: "", xml: "" , file_name: ""}
-    ]);
+		{ file_path: "", xml: "", file_name: "" },
+		{ file_path: "", xml: "", file_name: "" },
+	]);
 	grouped_diff: DiffGroup[] = $state([]);
 	result = $state("");
 	output_path = $state(settings.save_path);
-    save_options: SaveOptions = $state({
-        mode: 'new_location',
-        delete_file1: false,
-        delete_file2: false
-    });
+	save_options: SaveOptions = $state({
+		mode: "new_location",
+		delete_file1: false,
+		delete_file2: false,
+	});
 
-	async load_from_path(file_path:string, index: number) {
+	loading: boolean = $state(false);
+
+	async load_from_path(file_path: string, index: number) {
 		try {
-            const ext = file_path.split('.').pop() || "";
-            if (!SUPPORTED_META[ext]) {
-                return;
-            }
-            
-            let xml = "";
-            if (ext === "xml") {
-                xml = await readTextFile(file_path);
-            } else {
-                const temp_path = `${settings.save_path}\\temp${index}.xml`;
-                const result = await codewalkercli.export_xml(file_path, temp_path);
-                if (!result) {
-                    console.error("Failed to export XML", file_path);
-                    return;
-                }
-                xml = await invoke("read_file", {
-                    path: temp_path    
-                })
-            }
-            const file_name = file_path.split('\\').pop() || "";
-            this.xml[index] = {
-                file_path: file_path,
-                xml: xml,
-                file_name: file_name
-            }
-        } catch (error) {
+			const ext = file_path.split(".").pop() || "";
+			if (!SUPPORTED_META[ext]) {
+				throw new Error(`Unsupported file type: ${ext}`);
+			}
+
+			let xml = "";
+			if (ext === "xml") {
+				xml = await readTextFile(file_path);
+			} else {
+				const temp_path = `${settings.save_path}\\temp${index}.xml`;
+				const result = await codewalkercli.export_xml(file_path, temp_path);
+				if (!result) {
+					throw new Error(`Failed to export XML: ${file_path}`);
+				}
+				xml = await invoke("read_file", {
+					path: temp_path,
+				});
+			}
+			const file_name = file_path.split("\\").pop() || "";
+			this.xml[index] = {
+				file_path: file_path,
+				xml: xml,
+				file_name: file_name,
+			};
+		} catch (error) {
+            toast.add({
+                type: "error",
+                text: `Error loading XML file: ${error}`,
+            });
 			console.error("Error loading XML file:", error);
 		}
 	}
-    
-    async open_page_with_files(path1: string, path2: string, xml_output_path?: string) {
-        if (xml_output_path) {
-            this.output_path = xml_output_path;
-        }
-        goto("/diff_editor");
-        
-        const ext1 = path1.split('.').pop() || "";
-        const ext2 = path2.split('.').pop() || "";
-        
-        if(!(SUPPORTED_META[ext1] && SUPPORTED_META[ext2])) {
-            return;
-        }
-        
-		const result = await codewalkercli.export_xml(path1, `${settings.save_path}/temp1.xml`);
-        if (!result) {
-            console.error("Failed to export XML 1", path1);
-            toast.add({
-                type: 'error',
-                text: 'Failed to export XML 1'
-            });
-            return;
-        }
-        const result2 = await codewalkercli.export_xml(path2, `${settings.save_path}/temp2.xml`);
-        if (!result2) {
-            console.error("Failed to export XML 2", path2);
-            toast.add({
-                type: 'error',
-                text: 'Failed to export XML 2'
-            });
-            return;
-        }
-        
-        try {
-            const xml1: string = await invoke("read_file", {
-                path: `${settings.save_path}/temp1.xml`
-            })
-            
-            const xml2: string = await invoke("read_file", {
-                path: `${settings.save_path}/temp2.xml`
-            })
-            
-            this.xml = [
-                {
-                    file_path: path1,
-                    xml: xml1,
-                    file_name: path1.split('\\').pop() || "",
-                },
-                {
-                    file_path: path2,
-                    xml: xml2,
-                    file_name: path2.split('\\').pop() || "",
-                }
-            ];
-            
-            
-            this.compare(0, 1);
-        } catch (error) {
-            console.error("Error reading XML files:", error);
-        }
-    }
 
-	compare(index1:number, index2: number) {
+	async open_page_with_files(
+		path1: string,
+		path2: string,
+		xml_output_path?: string,
+	) {
+		this.loading = true;
+		try {
+			if (xml_output_path) {
+				this.output_path = xml_output_path;
+			}
+			goto("/diff_editor");
+
+			const ext1 = path1.split(".").pop() || "";
+			const ext2 = path2.split(".").pop() || "";
+
+			if (!(SUPPORTED_META[ext1] && SUPPORTED_META[ext2])) {
+				return;
+			}
+
+			const result = await codewalkercli.export_xml(
+				path1,
+				`${settings.save_path}/temp1.xml`,
+			);
+			if (!result) {
+				throw new Error(`Failed to export XML 1: ${path1}`);
+			}
+			const result2 = await codewalkercli.export_xml(
+				path2,
+				`${settings.save_path}/temp2.xml`,
+			);
+			if (!result2) {
+				throw new Error(`Failed to export XML 2: ${path2}`);
+			}
+
+			const xml1: string = await invoke("read_file", {
+				path: `${settings.save_path}/temp1.xml`,
+			});
+
+			const xml2: string = await invoke("read_file", {
+				path: `${settings.save_path}/temp2.xml`,
+			});
+
+			this.xml = [
+				{
+					file_path: path1,
+					xml: xml1,
+					file_name: path1.split("\\").pop() || "",
+				},
+				{
+					file_path: path2,
+					xml: xml2,
+					file_name: path2.split("\\").pop() || "",
+				},
+			];
+
+			this.compare(0, 1);
+            
+            this.loading = false;
+            
+		} catch (error) {
+            this.loading = false;
+			toast.add({
+				type: "error",
+				text: `Error opening diff editor: ${error}`,
+			});
+			console.error("Error opening diff editor:", error);
+		}
+	}
+
+	compare(index1: number, index2: number) {
 		try {
 			const patch = createPatch(
 				"file.xml",
-                this.xml[index1].xml || "",
-                this.xml[index2].xml || "",
+				this.xml[index1].xml || "",
+				this.xml[index2].xml || "",
 				"original",
 				"modified",
 			);
@@ -319,80 +332,83 @@ class DiffTool {
 			this.result = "";
 		}
 	}
-    
-    async save_result(options?: SaveOptions) {
-        const saveOpts = options || this.save_options;
-        let target_path = '';
-        switch (saveOpts.mode) {
-            case 'replace_file1':
-                target_path = this.xml[0].file_path;
-                break;
-            case 'replace_file2':
-                target_path = this.xml[1].file_path;
-                break;
-            case 'new_location':
-                if (!this.output_path) {
-                    return;
-                }
-                target_path = `${this.output_path}\\merged.${this.xml[0].file_name.split('.').pop()}`;
-                break;
-            case 'replace_both':
-                // Replace both files with the same content
-                await this.save_result({ ...saveOpts, mode: 'replace_file1' });
-                await this.save_result({ ...saveOpts, mode: 'replace_file2' });
-                return;
-        }
-        
-        const output_ext = target_path.split('.').pop() || "";
-        if (!SUPPORTED_META[output_ext]) {
-            return;
-        }
 
-        try {
-            if (output_ext === "xml") {
-                await invoke("write_file", {
-                    path: target_path,
-                    content: this.result
-                });
-            } else {
-                const new_xml_path = `${settings.save_path}/temp_output.xml`;
-                await invoke("write_file", {
-                    path: new_xml_path,
-                    content: this.result    
-                });
-                const result = await codewalkercli.import_xml(new_xml_path, target_path);
-                if (!result) {
-                    throw new Error("Failed to import XML");
-                }
-            }
+	async save_result(options?: SaveOptions) {
+		const saveOpts = options || this.save_options;
+		let target_path = "";
+		switch (saveOpts.mode) {
+			case "replace_file1":
+				target_path = this.xml[0].file_path;
+				break;
+			case "replace_file2":
+				target_path = this.xml[1].file_path;
+				break;
+			case "new_location":
+				if (!this.output_path) {
+					return;
+				}
+				target_path = `${this.output_path}\\merged.${this.xml[0].file_name.split(".").pop()}`;
+				break;
+			case "replace_both":
+				// Replace both files with the same content
+				await this.save_result({ ...saveOpts, mode: "replace_file1" });
+				await this.save_result({ ...saveOpts, mode: "replace_file2" });
+				return;
+		}
 
-            if (saveOpts.delete_file1 && this.xml[0].file_path !== target_path) {
-                await invoke("delete_file", { path: this.xml[0].file_path });
-            }
-            if (saveOpts.delete_file2 && this.xml[1].file_path !== target_path) {
-                await invoke("delete_file", { path: this.xml[1].file_path });
-            }
-            
-            toast.add({
-                type: 'success',
-                text: 'Saved successfully'
-            });
-        } catch (error) {
-            console.error("Error saving file:", error);
-        }
-    }
-    
-    async download_result() {
-        const blob = new Blob([this.result], { type: 'text/xml' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'merged.xml';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
+		const output_ext = target_path.split(".").pop() || "";
+		if (!SUPPORTED_META[output_ext]) {
+			return;
+		}
+
+		try {
+			if (output_ext === "xml") {
+				await invoke("write_file", {
+					path: target_path,
+					content: this.result,
+				});
+			} else {
+				const new_xml_path = `${settings.save_path}/temp_output.xml`;
+				await invoke("write_file", {
+					path: new_xml_path,
+					content: this.result,
+				});
+				const result = await codewalkercli.import_xml(
+					new_xml_path,
+					target_path,
+				);
+				if (!result) {
+					throw new Error("Failed to import XML");
+				}
+			}
+
+			if (saveOpts.delete_file1 && this.xml[0].file_path !== target_path) {
+				await invoke("delete_file", { path: this.xml[0].file_path });
+			}
+			if (saveOpts.delete_file2 && this.xml[1].file_path !== target_path) {
+				await invoke("delete_file", { path: this.xml[1].file_path });
+			}
+
+			toast.add({
+				type: "success",
+				text: "Saved successfully",
+			});
+		} catch (error) {
+			console.error("Error saving file:", error);
+		}
+	}
+
+	async download_result() {
+		const blob = new Blob([this.result], { type: "text/xml" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = "merged.xml";
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	}
 }
 
 export const diffTool = new DiffTool();
