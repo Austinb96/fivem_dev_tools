@@ -33,8 +33,7 @@
         ],
         "createUpdaterArtifacts": true,
         "resources": [
-            "CodeWalkerCli.exe",
-            "CodeWalker.Core.dll"
+            "CodeWalkerCli.exe"
         ]
     },
     "plugins": {
