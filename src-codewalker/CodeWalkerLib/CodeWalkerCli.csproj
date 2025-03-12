@@ -11,10 +11,15 @@
         <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
         <DebugType>embedded</DebugType>
         <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>partial</TrimMode>
+        <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <PublishReadyToRun>true</PublishReadyToRun>
     </PropertyGroup>
 
     <ItemGroup>
+        <TrimmerRootAssembly Include="CommandLine" />
         <PackageReference Include="CodeWalker.Core" Version="1.0.3" />
+        <PackageReference Include="CommandLineParser" Version="2.9.1" />
     </ItemGroup>
 </Project>

@@ -1,140 +1,193 @@
-﻿using System.Text.RegularExpressions;
-using System.Xml;
-using CodeWalker.GameFiles;
+﻿using CommandLine;
+using CodeWalkerCli.Commands;
+using CodeWalkerCli.Utils;
+using CodeWalkerCli.Interactive;
+using CodeWalkerCli.Processing;
 
-public class Program
+namespace CodeWalkerCli
 {
-    private const string GTA_PATH = "C:/Program Files/Rockstar Games/Grand Theft Auto V";
-    private static GameFileCache? gameFileCache;
-
-    public static void Main(string[] args)
+    public class Program
     {
-        if (args.Length == 0)
+        private static readonly string DEFAULT_GTA_PATH = "C:/Program Files/Rockstar Games/Grand Theft Auto V";
+        private static FileProcessor? processor;
+        private static readonly Parser parser = new Parser(with =>
         {
-            Console.WriteLine("[ERROR] No arguments provided");
-            return;
-        }
+            with.HelpWriter = Console.Out;
+            with.CaseInsensitiveEnumValues = true;
+            with.AutoHelp = true;
+            with.EnableDashDash = true;
+        });
 
-        switch (args[0])
+        public static int Main(string[] args)
         {
-            case "convert":
-                if (args.Length < 4)
+            try
+            {
+                var gtaPath = Environment.GetEnvironmentVariable("GTA_PATH") ?? DEFAULT_GTA_PATH;
+                
+                if (!Directory.Exists(gtaPath))
                 {
-                    PrintUsage();
-                    return;
+                    ConsoleUtils.WriteError($"GTA V path not found: {gtaPath}");
+                    ConsoleUtils.WriteInfo($"Set GTA_PATH environment variable or use default path: {DEFAULT_GTA_PATH}");
+                    return 1;
                 }
-                ConvertFile(args[1], args[2], args[3]);
-                break;
-            default:
-                PrintUsage();
-                break;
-        }
-    }
 
-    private static void PrintUsage()
-    {
-        Console.WriteLine("Usage:");
-        Console.WriteLine("  convert <type> <input> <output>");
-        Console.WriteLine("");
-        Console.WriteLine("Types:");
-        Console.WriteLine("  pso2xml - Convert PSO to XML");
-        Console.WriteLine("  xml2pso - Convert XML to PSO");
-        Console.WriteLine("");
-        Console.WriteLine("Examples:");
-        Console.WriteLine("  convert pso2xml input.ymt output.xml");
-        Console.WriteLine("  convert xml2pso input.xml output.ymt");
-    }
+                processor = new FileProcessor(gtaPath);
+                
+                var isPipedMode = Environment.GetEnvironmentVariable("CLIMODE") == "PIPED";
 
-    private static void InitCodeWalkerCache()
-    {
-        if (!Directory.Exists(GTA_PATH))
-        {
-            Console.WriteLine("[ERROR] GTA V path not found");
-            return;
-        }
-
-        Console.WriteLine("[INFO] Initializing cache");
-        GTA5Keys.LoadFromPath(GTA_PATH, null);
-        gameFileCache = new GameFileCache(
-            2147483648,
-            10,
-            GTA_PATH,
-            "",
-            true,
-            "Installers;_CommonRedist"
-        );
-
-        gameFileCache.Init(
-            status => { },
-            error => Console.WriteLine($"[ERROR] {error}")
-        );
-
-        Console.WriteLine("[INFO] Cache initialized");
-    }
-
-    private static void ConvertFile(string type, string inputPath, string outputPath)
-    {
-        try
-        {
-            if (!File.Exists(inputPath))
+                if (isPipedMode || Console.IsInputRedirected)
+                {
+                    return RunPipedMode();
+                }
+                else if (args.Length > 0)
+                {
+                    return RunCommandLineMode(args);
+                }
+                return RunInteractiveMode();
+            }
+            catch (Exception ex)
             {
-                Console.WriteLine("[ERROR] Input file not found");
-                return;
+                Console.Error.WriteLine($"Error: {ex.Message}");
+                return 1;
+            }
+        }
+
+        private static int RunPipedMode()
+        {
+            Console.WriteLine("[CLI] Running in piped mode");
+            Console.Out.Flush();
+
+            string? line;
+            while ((line = Console.ReadLine()) != null)
+            {
+                if (string.IsNullOrEmpty(line)) continue;
+
+                try
+                {
+                    var args = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    ConsoleUtils.WriteCMD($"Processing command");
+                    Console.Out.Flush();
+
+                    if (args.Contains("-h") || args.Contains("--help"))
+                    {
+                        ConsoleUtils.WriteInfo("Displaying command help");
+                        parser.ParseArguments<ExportOptions>(new[] { "--help" });
+                        Console.Out.Flush();
+                        ConsoleUtils.WriteCMD("Command completed");
+                        continue;
+                    }
+
+                    var result = parser.ParseArguments<ImportOptions, ExportOptions>(args);
+                    result
+                        .WithParsed<ImportOptions>(opts => HandleImport(opts))
+                        .WithParsed<ExportOptions>(opts => HandleExport(opts));
+
+                    ConsoleUtils.WriteCMD("Command completed");
+                    Console.Out.Flush();
+                }
+                catch (Exception ex)
+                {
+                    ConsoleUtils.WriteError($"{ex.Message}");
+                    ConsoleUtils.WriteCMD("Command completed");
+                    Console.Out.Flush();
+                }
             }
 
+            ConsoleUtils.WriteInfo("[CLI] Shutting down");
+            return 0;
+        }
 
-            switch (type.ToLower())
+        private static int RunInteractiveMode()
+        {
+            ConsoleUtils.WriteInfo("Interactive CLI mode. Type 'exit' to quit.");
+            ConsoleUtils.WriteInfo("Use TAB for forward completion, Shift+TAB for backward completion");
+
+            var inputHandler = new InputHandler();
+
+            while (true)
             {
-                case "pso2xml":
-                    InitCodeWalkerCache();
-                    Console.WriteLine("[INFO] Converting PSO to XML");
-                    var pso = new PsoFile();
-                    var data = File.ReadAllBytes(inputPath);
-                    pso.Load(data);
-                    var xmlContent = PsoXml.GetXml(pso);
-                    File.WriteAllText(outputPath, xmlContent);
-                    break;
+                var input = inputHandler.ReadLineWithCompletion();
 
-                case "xml2pso":
-                    Console.WriteLine("[INFO] Converting XML to PSO");
-                    XmlDocument xml = new XmlDocument();
-                    xml.Load(inputPath);
-                    var psoFile = XmlPso.GetPso(xml);
-                    var psoData = psoFile.Save();
-                    File.WriteAllBytes(outputPath, psoData);
-                    break;
-                    
-                case "ymt2xml":
-                    InitCodeWalkerCache();
-                    Console.WriteLine("[INFO] Converting YMT to XML");
-                    var ymt = new YmtFile();
-                    var ymtData = File.ReadAllBytes(inputPath);
-                    ymt.Load(ymtData);
-                    var ymtXmlContent = MetaXml.GetXml(ymt, out var ymtXml);
-                    File.WriteAllText(outputPath, ymtXmlContent);
-                    break;
-                    
-                case "ymap2xml":
-                    InitCodeWalkerCache();
-                    Console.WriteLine("[INFO] Converting YMAP to XML");
-                    var ymap = new YmapFile();
-                    var ymapData = File.ReadAllBytes(inputPath);
-                    ymap.Load(ymapData);
-                    var ymapXmlContent = MetaXml.GetXml(ymap, out var ymapXml);
-                    File.WriteAllText(outputPath, ymapXmlContent);
-                    break;
+                if (string.IsNullOrEmpty(input) || input.ToLower() == "exit")
+                {
+                    return 0;
+                }
 
-                default:
-                    Console.WriteLine("[ERROR] Invalid conversion type");
-                    PrintUsage();
-                    return;
+                var inputArgs = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                HandleCommand(inputArgs);
+            }
+        }
+
+        private static int RunCommandLineMode(string[] args)
+        {
+            Console.WriteLine("[INFO] Running in command line mode");
+            Console.WriteLine($"[INFO] Processing command: {string.Join(" ", args)}");
+            return Parser.Default.ParseArguments<ImportOptions, ExportOptions>(args)
+                .MapResult(
+                    (ImportOptions opts) => HandleImport(opts),
+                    (ExportOptions opts) => HandleExport(opts),
+                    errs => 1);
+        }
+
+        private static void HandleCommand(string[] args)
+        {
+            var types = new Type[] { typeof(ExportOptions), typeof(ImportOptions) };
+            var result = parser.ParseArguments(args, types);
+
+            result
+                .WithParsed<ExportOptions>(opts => processor.ExportXml(opts.InputPath, opts.OutputPath))
+                .WithParsed<ImportOptions>(opts => processor.ImportXML(opts.InputPath, opts.OutputPath, opts.MetaFormat))
+                .WithNotParsed(errors =>
+                {
+                    foreach (var error in errors)
+                    {
+                        ConsoleUtils.WriteError($"Error: {error}");
+                    }
+                });
+        }
+
+        private static int HandleImport(ImportOptions opts)
+        {
+            if (string.IsNullOrEmpty(opts.InputPath) || string.IsNullOrEmpty(opts.OutputPath))
+            {
+                ConsoleUtils.WriteError("Input and output paths are required");
+                return 1;
             }
 
-            Console.WriteLine("[SUCCESS] Conversion completed");
+            try
+            {
+                processor.ImportXML(opts.InputPath, opts.OutputPath, opts.MetaFormat);
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                ConsoleUtils.WriteError(ex.Message);
+                return 1;
+            }
         }
-        catch (Exception ex)
+
+        private static int HandleExport(ExportOptions opts)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            if (string.IsNullOrEmpty(opts.InputPath) || string.IsNullOrEmpty(opts.OutputPath))
+            {
+                ConsoleUtils.WriteError("Input and output paths are required");
+                return 1;
+            }
+
+            try
+            {
+                ConsoleUtils.WriteInfo($"Input path: {opts.InputPath}");
+                ConsoleUtils.WriteInfo($"Output path: {opts.OutputPath}");
+
+                var format = processor.ExportXml(opts.InputPath, opts.OutputPath);
+                ConsoleUtils.WriteInfo($"Final format: {format}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                ConsoleUtils.WriteError(ex.Message);
+                return 1;
+            }
         }
     }
 }
