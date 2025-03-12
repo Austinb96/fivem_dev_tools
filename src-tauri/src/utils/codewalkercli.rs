@@ -21,10 +21,12 @@ const CLI_INFO: &str = "[TAURI INFO]";
 pub enum CliError {
     #[error("CLI is already running")]
     AlreadyRunning,
-    #[error("GTA V path not found")]
-    PathNotFound,
-    #[error("GTA5.exe not found in the specified directory")]
-    ExecutableNotFound,
+    #[error("Invalid GTA V installation: {0}")]
+    InvalidInstallation(String),
+    #[error("GTA V path not found at path: {0}")]
+    PathNotFound(String),
+    #[error("GTA5.exe not found in GTA V path: {0}")]
+    ExecutableNotFound(String),
     #[error("CLI is not running")]
     NotRunning,
     #[error("CLI is not ready")]
@@ -74,17 +76,11 @@ impl CliProcess {
     }
 
     async fn start(gta_path: String, app_handle: &AppHandle) -> Result<Self, CliError> {
-        let gta_path = if Path::new(&gta_path).exists() {
-            gta_path
-        } else if Path::new(DEFAULT_GTA_PATH).exists() {
-            DEFAULT_GTA_PATH.to_string()
-        } else {
-            return Err(CliError::PathNotFound);
-        };
+        let gta_path = validate_gta_path(gta_path)?;
 
         let exe_path = Path::new(&gta_path).join("GTA5.exe");
         if !exe_path.exists() {
-            return Err(CliError::ExecutableNotFound);
+            return Err(CliError::ExecutableNotFound(gta_path));
         }
 
         let shell = app_handle.shell();
@@ -97,7 +93,6 @@ impl CliProcess {
 
         let process = Self::new(command);
 
-        // Spawn the event handling task
         let app_handle = app_handle.clone();
         let cli_clone = Arc::clone(&CLI_PROCESS);
         tauri::async_runtime::spawn(async move {
@@ -163,6 +158,28 @@ impl CliProcess {
             Err(CliError::NotRunning)
         }
     }
+}
+
+#[tauri::command]
+pub fn validate_gta_path(path: String) -> Result<String, CliError> {
+    let path = Path::new(&path);
+
+    if !path.exists() {
+        return Err(CliError::PathNotFound(path.display().to_string()));
+    }
+
+    if !path.is_dir() {
+        return Err(CliError::InvalidInstallation(
+            "Path is not a directory".to_string(),
+        ));
+    }
+
+    let exe_path = path.join("GTA5.exe");
+    if !exe_path.exists() {
+        return Err(CliError::ExecutableNotFound(path.display().to_string()));
+    }
+
+    Ok(path.to_string_lossy().into_owned())
 }
 
 static CLI_PROCESS: Lazy<Arc<Mutex<Option<CliProcess>>>> = Lazy::new(|| Arc::new(Mutex::new(None)));

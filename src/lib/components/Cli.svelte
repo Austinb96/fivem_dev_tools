@@ -1,6 +1,5 @@
 <script lang="ts">
     import { codewalkercli } from "../../codewalkercli.svelte";
-    import { onDestroy } from 'svelte';
     import { invoke } from "@tauri-apps/api/core";
 
     let autoScroll = $state(true);
@@ -96,11 +95,6 @@
         const response = await invoke('get_paths_in_dir', { path: search });
         return response as string[];
     }
-
-    onDestroy(() => {
-        codewalkercli.cleanup();
-    });
-
 </script>
 
 <div class="cli-container">
@@ -114,9 +108,6 @@
         </label>
     </div>
     
-    {#if codewalkercli.error}
-        <div class="error">{codewalkercli.error}</div>
-    {/if}
     <pre 
         class="output" 
         bind:this={outputElement}
@@ -151,15 +142,6 @@
         gap: 1rem;
         align-items: center;
         margin-bottom: 1rem;
-    }
-    
-    .error {
-        color: red;
-        margin: 1rem 0;
-        padding: 0.5rem;
-        border: 1px solid red;
-        border-radius: 5px;
-        background: rgba(255, 0, 0, 0.1);
     }
     
     .output {

@@ -2,6 +2,8 @@
     import { open } from '@tauri-apps/plugin-dialog';
     import { settings } from "../../settings.svelte";
     import Cli from "$lib/components/Cli.svelte";
+    import { invoke } from '@tauri-apps/api/core';
+    import { toast } from '../../toast.svelte';
 
     async function selectBasePath() {
         const folder = await open({
@@ -21,9 +23,23 @@
             directory: true,
         });
 
-        if (folder) {
-            settings.game_path = folder;
-            settings.save();
+        try{
+            const is_valid = await invoke('validate_gta_path', { path: folder });
+            if (folder && is_valid) {
+                toast.add({
+                    text: 'GTA V Path is valid',
+                    type: 'success',
+                });
+                settings.game_path = folder;
+                settings.save();
+            }
+            
+        }catch(e){
+            toast.add({
+                text: `Invalid GTA V Path: ${e}`,
+                type: 'error',
+            });
+            console.error(e);
         }
     }
     

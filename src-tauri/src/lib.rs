@@ -6,7 +6,7 @@ mod utils {
 
 use rayon::prelude::*;
 use std::path::Path;
-use utils::codewalkercli::{send_command, start_codewalker, stop_codewalker};
+use utils::codewalkercli::{send_command, start_codewalker, stop_codewalker, validate_gta_path};
 use utils::files::{collect_files, collect_tables, filter_duplicates, get_paths_in_dir, read_file, write_file, delete_file};
 use utils::vector::{self, find_vectors_in_dir, VectorInfo};
 
@@ -70,7 +70,8 @@ pub fn run() {
             get_paths_in_dir,
             read_file,
             write_file,
-            delete_file
+            delete_file,
+            validate_gta_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,83 +1,47 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { settings } from "./settings.svelte";
-
-export enum CodeWalkerCliState {
-    Started = 0,
-    Stopped = 1,
-}
+import { toast } from "./toast.svelte";
 
 class CodeWalkerCli {
     output: string[] = $state([]);
     command_history: string[] = $state([]);
-    error: string = $state("");
-    state: CodeWalkerCliState = $state(CodeWalkerCliState.Stopped);
-    private unlisteners: UnlistenFn[] = [];
-
     constructor() {
-        this.registerListeners();
         this.output = [];
-        this.error = "";
-        
-        console.log("checking", this.output, this.error);
     }
 
-    private async registerListeners() {
-        this.unlisteners.push(
-            await listen<string>("cli-output", (event) => {
-                console.log("cli-output", event.payload);
-                console.log("type:", typeof(event.payload))
-                this.output.push(event.payload);
-            }),
-            await listen<string>("cli-error", (event) => {
-                console.log("cli-error", event.payload);
-                this.error = event.payload;
-            })
-        );
-    }
-
-    cleanup() {
-        console.log("Cleaning up CodeWalkerCli");
-        for (const unlisten of this.unlisteners) {
-            unlisten();
-        }
-        this.unlisteners = [];
-    }
-    
 	start() {
-        console.log(this.error, this.output)
-        this.error = "";
+        console.log("Starting CodeWalkerCLI", settings.game_path);
 		invoke("start_codewalker", {
 			gtaPath: settings.game_path,
 		})
 			.then(() => {
-				this.state = CodeWalkerCliState.Started;
-                this.output.push("CodeWalkerCLI started");
+                this.output.push("CodeWalkerCLI started\n");
 			})
 			.catch((e) => {
-                this.error = e as string;
-				// console.error(e);
+                toast.add({
+                    text: `Failed to start CodeWalkerCLI: ${e as string}`,
+                    type: "error",
+                })
+				console.error(e);
 			});
-            
-        this.error = "banana";
 	}
     
     stop() {
-        this.error = "";
         invoke("stop_codewalker")
             .then(() => {
-                this.state = CodeWalkerCliState.Stopped;
-                this.output.push("CodeWalkerCLI stopped");
+                this.output = ["CodeWalkerCLI stopped\n"];
             })
             .catch((e) => {
-                this.error = e as string;
+                toast.add({
+                    text: `Failed to stop CodeWalkerCLI: ${e as string}`,
+                    type: "error",
+                })
                 console.error(e);
             });
     }
     
     //TODO better error handling
     async send_command(command: string) {
-        this.error = "";
         this.command_history.push(command);
         invoke("send_command", {
             command: command
@@ -86,7 +50,10 @@ class CodeWalkerCli {
                 console.log("Command sent: ", command);
             })
             .catch((e) => {
-                this.error = e as string;
+                toast.add({
+                    text: `Failed to send command: ${e as string}`,
+                    type: "error",
+                })
                 console.error(e);
             });
     }
@@ -99,10 +66,6 @@ class CodeWalkerCli {
             await new Promise((resolve) => {
                 setTimeout(resolve, 1000);
             });
-            
-            if(this.error) {
-                throw this.error;
-            }
             
             return true;
             
@@ -119,10 +82,6 @@ class CodeWalkerCli {
                 setTimeout(resolve, 1000);
             });
             
-            if(this.error) {
-                throw this.error;
-            }
-            
             return true;
             
         } catch (e) {
@@ -132,9 +91,3 @@ class CodeWalkerCli {
 }
 
 export const codewalkercli = new CodeWalkerCli();
-
-codewalkercli.start();
-
-window.addEventListener('unload', () => {
-    codewalkercli.cleanup();
-});
