@@ -234,6 +234,12 @@ class DiffTool {
 				!this.grouped_diff[index].isExpanded;
 		}
 	}
+    
+    toggle_expanded_all(expanded: boolean) {
+        for (const group of this.grouped_diff) {
+            group.isExpanded = expanded;
+        }
+    }
 
 	toggle_selected_line(line: DiffLine) {
 		if (line.type === "added" || line.type === "removed") {

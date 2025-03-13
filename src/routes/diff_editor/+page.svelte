@@ -166,6 +166,19 @@
                     >
                         Deselect All File2
                     </button>
+                    
+                    <button 
+                        class="toggle-button neutral"
+                        onclick={() => diffTool.toggle_expanded_all(true)}
+                    >
+                        Expand All
+                    </button>
+                    <button 
+                        class="toggle-button neutral"
+                        onclick={() => diffTool.toggle_expanded_all(false)}
+                    >
+                        Collapse All
+                    </button>
                 </div>
                 {#each diffTool.grouped_diff as group, groupIndex}
                     <div class="diff-group">
@@ -669,6 +682,18 @@
         opacity: 0.9;
         background-color: #313244;
     }
+    
+    .toggle-button.neutral {
+        background-color: transparent;
+        color: #cdd6f4;
+        border: 1px solid #45475a;
+    }
+
+    .toggle-button.neutral:hover {
+        border-color: #89b4fa;
+        color: #89b4fa;
+    }
+    
 
     .chunk-controls {
         padding: 0.25rem 0.5rem;
