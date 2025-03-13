@@ -12,6 +12,14 @@
         "store:default",
         "fs:default",
         "fs:read-all",
-        "fs:write-all"
+        "fs:write-all",
+        {
+            "identifier": "opener:allow-open-path",
+            "allow": [
+                {
+                    "path": "**"
+                }
+            ]
+        }
     ]
 }
