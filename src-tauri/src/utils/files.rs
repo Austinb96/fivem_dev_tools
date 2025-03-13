@@ -133,10 +133,14 @@ pub fn read_file(path: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn write_file(path: &str, content: &str) -> Result<(), String> {
+pub fn write_file(path: &str, content: &str) -> Result<bool, String> {
+    println!("writing to path: {:?}", path);
     match fs::write(path, content) {
-        Ok(_) => Ok(()),
-        Err(e) => Err(e.to_string()),
+        Ok(_) => Ok(true),
+        Err(e) => {
+            println!("error: {:?}", e);
+            Err(e.to_string())
+        },
     }
 }
 

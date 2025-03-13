@@ -67,7 +67,7 @@ namespace CodeWalkerCli.Processing
             }
         }
 
-        public MetaFormat ExportXml(string inputPath, string outputPath)
+        public MetaFormat ExportXml(string inputPath, string outputPath, MetaFormat? requestedFormat)
         {
             try
             {
@@ -78,9 +78,9 @@ namespace CodeWalkerCli.Processing
                 }
 
                 MetaFormat metaFormat = MetaFormat.XML;
-                string file_ext = Path.GetExtension(inputPath).ToLower().Replace(".", "");
-
-                switch (file_ext)
+                string file_ext = requestedFormat.ToString() ?? Path.GetExtension(inputPath).ToLower().Replace(".", "");
+                
+                switch (file_ext.ToLower())
                 {
                     case "ymt":
                         ConsoleUtils.WriteInfo("Converting YMT to XML");
@@ -111,7 +111,17 @@ namespace CodeWalkerCli.Processing
                         File.WriteAllText(outputPath, ytypXmlContent);
                         metaFormat = DetermineMetaFormat(ytyp.Meta, ytyp.Pso, ytyp.Rbf);
                         break;
-
+                        
+                    case "pso":
+                        ConsoleUtils.WriteInfo("Converting PSO to XML");
+                        var pso = new PsoFile();
+                        var psoData = File.ReadAllBytes(inputPath);
+                        pso.Load(psoData);
+                        var psoXmlContent = PsoXml.GetXml(pso);
+                        File.WriteAllText(outputPath, psoXmlContent);
+                        metaFormat = MetaFormat.PSO;
+                        break;
+                        
                     default:
                         ConsoleUtils.WriteError($"Invalid file type {file_ext}. Supported types: pso, ymt, ymap, ytyp");
                         return metaFormat;

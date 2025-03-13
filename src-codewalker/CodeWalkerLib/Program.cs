@@ -135,7 +135,7 @@ namespace CodeWalkerCli
             var result = parser.ParseArguments(args, types);
 
             result
-                .WithParsed<ExportOptions>(opts => processor.ExportXml(opts.InputPath, opts.OutputPath))
+                .WithParsed<ExportOptions>(opts => processor.ExportXml(opts.InputPath, opts.OutputPath, opts.MetaFormat))
                 .WithParsed<ImportOptions>(opts => processor.ImportXML(opts.InputPath, opts.OutputPath, opts.MetaFormat))
                 .WithNotParsed(errors =>
                 {
@@ -179,7 +179,7 @@ namespace CodeWalkerCli
                 ConsoleUtils.WriteInfo($"Input path: {opts.InputPath}");
                 ConsoleUtils.WriteInfo($"Output path: {opts.OutputPath}");
 
-                var format = processor.ExportXml(opts.InputPath, opts.OutputPath);
+                var format = processor.ExportXml(opts.InputPath, opts.OutputPath, opts.MetaFormat);
                 ConsoleUtils.WriteInfo($"Final format: {format}");
                 return 0;
             }
