@@ -46,7 +46,7 @@ async function handleFileInput() {
                 xml = await readTextFile(selected);
                 
             } else{
-                const save_path = `${settings.save_path}/popgroups.xml`;
+                const save_path = `${settings.save_path}\\popgroups.xml`;
                 const result = await codewalkercli.export_xml(selected, save_path, "pso");
                 if (result){
                     xml = await invoke("read_file", {
@@ -145,8 +145,8 @@ async function downloadXML() {
             throw new Error("Failed to save xml file");
         }
         
-        const ymt_path = `${settings.save_path}/popgroups.ymt`;
-        const result = codewalkercli.import_xml(`${settings.save_path}/popgroups.xml`, ymt_path, "pso");
+        const ymt_path = `${settings.save_path}\\popgroups.ymt`;
+        const result = codewalkercli.import_xml(`${settings.save_path}\\popgroups.xml`, ymt_path, "pso");
         
         if (result){
             toast.add({

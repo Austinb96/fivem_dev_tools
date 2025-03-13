@@ -61,8 +61,8 @@ class CodeWalkerCli {
     //TODO better error handling
     async export_xml(file: string, output: string, meta_type?: string) {
         try{
-            await this.send_command(`exportxml -i ${file} -o ${output} ${meta_type ? ` -m ${meta_type}` : ""}`);
-            
+            await this.send_command(`exportxml -i "${file}" -o "${output}" ${meta_type ? ` -m ${meta_type}` : ""}`);
+
             await new Promise((resolve) => {
                 setTimeout(resolve, 1000);
             });
@@ -76,7 +76,7 @@ class CodeWalkerCli {
     
     async import_xml(file: string, output: string, meta_type?: string) {
         try{
-            await this.send_command(`importxml -i ${file} -o ${output} ${meta_type ? ` -m ${meta_type}` : ""}`);
+            await this.send_command(`importxml -i "${file}" -o "${output}" ${meta_type ? ` -m ${meta_type}` : ""}`);
             
             await new Promise((resolve) => {
                 setTimeout(resolve, 1000);

@@ -3,6 +3,7 @@ using CodeWalkerCli.Commands;
 using CodeWalkerCli.Utils;
 using CodeWalkerCli.Interactive;
 using CodeWalkerCli.Processing;
+using System.Text;
 
 namespace CodeWalkerCli
 {
@@ -64,7 +65,7 @@ namespace CodeWalkerCli
 
                 try
                 {
-                    var args = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var args = SplitCommandLine(line);
                     ConsoleUtils.WriteCMD($"Processing command");
                     Console.Out.Flush();
 
@@ -78,6 +79,7 @@ namespace CodeWalkerCli
                     }
 
                     var result = parser.ParseArguments<ImportOptions, ExportOptions>(args);
+                    Console.WriteLine($"[CLI] Parsing arguments: {string.Join(" ", args)}");
                     result
                         .WithParsed<ImportOptions>(opts => HandleImport(opts))
                         .WithParsed<ExportOptions>(opts => HandleExport(opts));
@@ -113,8 +115,8 @@ namespace CodeWalkerCli
                     return 0;
                 }
 
-                var inputArgs = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                HandleCommand(inputArgs);
+                var args = SplitCommandLine(input);
+                HandleCommand(args);
             }
         }
 
@@ -133,7 +135,7 @@ namespace CodeWalkerCli
         {
             var types = new Type[] { typeof(ExportOptions), typeof(ImportOptions) };
             var result = parser.ParseArguments(args, types);
-
+            
             result
                 .WithParsed<ExportOptions>(opts => processor.ExportXml(opts.InputPath, opts.OutputPath, opts.MetaFormat))
                 .WithParsed<ImportOptions>(opts => processor.ImportXML(opts.InputPath, opts.OutputPath, opts.MetaFormat))
@@ -188,6 +190,43 @@ namespace CodeWalkerCli
                 ConsoleUtils.WriteError(ex.Message);
                 return 1;
             }
+        }
+        
+        public static string[] SplitCommandLine(string commandLine)
+        {
+            var arguments = new List<string>();
+            var currentArgument = new StringBuilder();
+            var inQuotes = false;
+
+            for (int i = 0; i < commandLine.Length; i++)
+            {
+                char c = commandLine[i];
+
+                if (c == '"')
+                {
+                    inQuotes = !inQuotes;
+                    continue;
+                }
+
+                if (!inQuotes && c == ' ')
+                {
+                    if (currentArgument.Length > 0)
+                    {
+                        arguments.Add(currentArgument.ToString());
+                        currentArgument.Clear();
+                    }
+                    continue;
+                }
+
+                currentArgument.Append(c);
+            }
+
+            if (currentArgument.Length > 0)
+            {
+                arguments.Add(currentArgument.ToString());
+            }
+
+            return arguments.ToArray();
         }
     }
 }

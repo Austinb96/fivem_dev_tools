@@ -48,7 +48,7 @@ namespace CodeWalkerCli.Processing
             {
                 if (!File.Exists(inputPath))
                 {
-                    ConsoleUtils.WriteError("Input file not found");
+                    ConsoleUtils.WriteError($"Input file not found: ${inputPath}");
                     return;
                 }
                 
@@ -71,14 +71,23 @@ namespace CodeWalkerCli.Processing
         {
             try
             {
+                Console.WriteLine($"Checking input file {inputPath}");
                 if (!File.Exists(inputPath))
                 {
-                    ConsoleUtils.WriteError("Input file not found");
+                    ConsoleUtils.WriteError($"Input file not found: {inputPath}");
                     return MetaFormat.XML;
                 }
 
                 MetaFormat metaFormat = MetaFormat.XML;
-                string file_ext = requestedFormat.ToString() ?? Path.GetExtension(inputPath).ToLower().Replace(".", "");
+                
+                string file_ext =  Path.GetExtension(inputPath).ToLower().Replace(".", "");
+                if (requestedFormat != null)
+                {
+                    ConsoleUtils.WriteInfo($"Requested format: {requestedFormat}");
+                    file_ext = requestedFormat?.ToString().ToLower() ?? file_ext;
+                }
+                
+                ConsoleUtils.WriteInfo($"File ext found {file_ext}");
                 
                 switch (file_ext.ToLower())
                 {

@@ -111,25 +111,25 @@ class DiffTool {
 
 			const result = await codewalkercli.export_xml(
 				path1,
-				`${settings.save_path}/temp1.xml`,
+				`${settings.save_path}\\temp1.xml`,
 			);
 			if (!result) {
 				throw new Error(`Failed to export XML 1: ${path1}`);
 			}
 			const result2 = await codewalkercli.export_xml(
 				path2,
-				`${settings.save_path}/temp2.xml`,
+				`${settings.save_path}\\temp2.xml`,
 			);
 			if (!result2) {
 				throw new Error(`Failed to export XML 2: ${path2}`);
 			}
 
 			const xml1: string = await invoke("read_file", {
-				path: `${settings.save_path}/temp1.xml`,
+				path: `${settings.save_path}\\temp1.xml`,
 			});
 
 			const xml2: string = await invoke("read_file", {
-				path: `${settings.save_path}/temp2.xml`,
+				path: `${settings.save_path}\\temp2.xml`,
 			});
 
 			this.xml = [

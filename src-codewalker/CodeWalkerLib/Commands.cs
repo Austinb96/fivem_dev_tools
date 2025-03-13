@@ -12,8 +12,8 @@ namespace CodeWalkerCli.Commands
         [Option('o', "output", Required = true, HelpText = "Output file path")]
         public string OutputPath { get; set; } = string.Empty;
         
-        [Option('m', "meta", Required = false, Default = MetaFormat.RSC, HelpText = "Meta format (RSC, PSO, RBF)")]
-        public MetaFormat MetaFormat { get; set; }
+        [Option('m', "meta", Required = false, Default = null, HelpText = "Meta format (RSC, PSO, RBF)")]
+        public MetaFormat? MetaFormat { get; set; }
 
         public ExportOptions() { }
     }
