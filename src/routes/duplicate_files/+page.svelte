@@ -111,6 +111,7 @@
                                                 type: "error"
                                             })
                                         }
+                                        console.log("Comparing", `${settings.base_path}/${paths[0]}`, `${settings.base_path}/${paths[1]}`);
                                         diffTool.open_page_with_files(`${settings.base_path}/${paths[0]}`, `${settings.base_path}/${paths[1]}`)
                                     }}
                                 > 
