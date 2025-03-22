@@ -15,11 +15,19 @@
         <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <PublishReadyToRun>true</PublishReadyToRun>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     </PropertyGroup>
 
     <ItemGroup>
         <TrimmerRootAssembly Include="CommandLine" />
-        <PackageReference Include="CodeWalker.Core" Version="1.0.3" />
         <PackageReference Include="CommandLineParser" Version="2.9.1" />
+        <Reference Include="CodeWalker.Core">
+            <HintPath>CodeWalker\CodeWalker.Core.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
+        <Reference Include="SharpDX.Mathematics">
+            <HintPath>CodeWalker\SharpDX.Mathematics.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
     </ItemGroup>
 </Project>
