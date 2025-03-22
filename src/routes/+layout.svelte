@@ -12,10 +12,10 @@
         (async () => {
             await settings.wait_for_ready();
             listeners.push(await listen<string>("cli-output", (event) => {
-                codewalkercli.output.push(event.payload);
+                codewalkercli.add_output(event.payload);
             }));
             listeners.push(await listen<string>("cli-error", (event) => {
-                codewalkercli.output.push(event.payload);
+                codewalkercli.add_output(event.payload);
             }));
 
             codewalkercli.start();

@@ -7,7 +7,7 @@ mod utils {
 use rayon::prelude::*;
 use std::path::Path;
 use utils::codewalkercli::{send_command, start_codewalker, stop_codewalker, validate_gta_path};
-use utils::files::{collect_files, collect_tables, filter_duplicates, get_paths_in_dir, read_file, write_file, delete_file};
+use utils::files::{collect_files, collect_tables, filter_duplicates, get_paths_in_dir, read_file, write_file, delete_file, read_binary_file};
 use utils::vector::{self, find_vectors_in_dir, VectorInfo};
 
 #[tauri::command]
@@ -50,6 +50,8 @@ fn get_lua_tables(path: String, table_filter: Vec<String>) -> Vec<String> {
     collect_tables(Path::new(&path), table_filter).unwrap_or_default()
 }
 
+
+
 // Main application setup
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -71,7 +73,8 @@ pub fn run() {
             read_file,
             write_file,
             delete_file,
-            validate_gta_path
+            validate_gta_path,
+            read_binary_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

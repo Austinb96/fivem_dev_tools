@@ -133,6 +133,14 @@ pub fn read_file(path: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn read_binary_file(path: &str) -> Result<Vec<u8>, String> {
+    match std::fs::read(path) {
+        Ok(bytes) => Ok(bytes),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
 pub fn write_file(path: &str, content: &str) -> Result<bool, String> {
     println!("writing to path: {:?}", path);
     match fs::write(path, content) {

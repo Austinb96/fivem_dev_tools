@@ -10,6 +10,7 @@ const navLinks = [
 	{ name: "Duplicate Files", path: "/duplicate_files", icon: "📂" },
     { name: "Popgroups Editor", path: "/popgroups_editor", icon:  "📋" },
     { name: "Diff Tool" , path: "/diff_editor", icon: "🔃" },
+    { name: "Model Viewer", path: "/model_viewer", icon: "👀" },
 	{ name: "Settings", path: "/settings", icon: "⚙️" },
 ];
 

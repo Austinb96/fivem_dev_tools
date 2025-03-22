@@ -10,12 +10,36 @@ use tauri_plugin_shell::{
     ShellExt,
 };
 
+#[derive(Debug, Clone)]
+struct CommandResult {
+    output: Vec<String>,
+    complete: bool,
+    start_index: Option<usize>,
+    end_index: Option<usize>,
+}
+
+impl CommandResult {
+    fn new() -> Self {
+        Self {
+            output: Vec::new(),
+            complete: false,
+            start_index: None,
+            end_index: None,
+        }
+    }
+}
+
 const DEFAULT_GTA_PATH: &str = "C:/Program Files/Rockstar Games/Grand Theft Auto V";
 const CACHE_INITIALIZED_MSG: &str = "[INFO] Cache initialized";
 const PROCESSING_COMMAND_MSG: &str = "[CMD]";
 const COMMAND_COMPLETE_MSG: &str = "[CMD] Command completed";
+const OUTPUT_START_MSG: &str = "[OUTPUT_START]";
+const OUTPUT_END_MSG: &str = "[OUTPUT_END]";
 const CLI_ERROR: &str = "[TAURI ERROR]";
 const CLI_INFO: &str = "[TAURI INFO]";
+
+static CURRENT_COMMAND: Lazy<Arc<Mutex<CommandResult>>> = Lazy::new(|| Arc::new(Mutex::new(CommandResult::new())));
+    
 
 #[derive(Debug, thiserror::Error)]
 pub enum CliError {
@@ -37,6 +61,8 @@ pub enum CliError {
     LockError(String),
     #[error("Command failed: {0}")]
     CommandError(String),
+    #[error("IO error: {0}")]
+    IoError(#[from] std::io::Error),
 }
 
 impl Serialize for CliError {
@@ -126,7 +152,7 @@ impl CliProcess {
                 }
             }
         });
-
+        
         Ok(process)
     }
 
@@ -184,26 +210,36 @@ pub fn validate_gta_path(path: String) -> Result<String, CliError> {
 
 static CLI_PROCESS: Lazy<Arc<Mutex<Option<CliProcess>>>> = Lazy::new(|| Arc::new(Mutex::new(None)));
 fn handle_stdout(line_str: String, app_handle: &AppHandle, cli: &mut CliProcess) {
-    app_handle
-        .emit("cli-output", line_str.to_string())
-        .unwrap_or_default();
-
-    // Only log non-empty lines
-    if !line_str.trim().is_empty() {
-        println!("-{}", line_str);
+    if !line_str.starts_with('[') {
+        app_handle.emit("cli-output", line_str.clone()).unwrap_or_default();
     }
+    
+    let mut cmd_result = CURRENT_COMMAND.lock().unwrap();
+    cmd_result.output.push(line_str.clone());
 
-    if !cli.is_ready() && line_str.contains(CACHE_INITIALIZED_MSG) {
-        println!("{} CLI Ready", CLI_INFO);
-        cli.set_ready();
-        let _ = app_handle.emit("cli-ready", true);
-    } else if line_str.contains(COMMAND_COMPLETE_MSG) {
-        println!("{} Command complete", CLI_INFO);
-        cli.set_processing(false);
-        let _ = app_handle.emit("cli-command-complete", true);
-    } else if line_str.contains(PROCESSING_COMMAND_MSG) {
-        println!("{} Processing command", CLI_INFO);
-        cli.set_processing(true);
+    match line_str {
+        _ if line_str.contains(OUTPUT_START_MSG) => {
+            println!("{} Output Start", CLI_INFO);
+            cmd_result.start_index = Some(cmd_result.output.len());
+        }
+        _ if line_str.contains(OUTPUT_END_MSG) => {
+            println!("{} Output End", CLI_INFO);
+            cmd_result.end_index = Some(cmd_result.output.len());
+        }
+        _ if line_str.contains(COMMAND_COMPLETE_MSG) => {
+            cli.set_processing(false);
+            cmd_result.complete = true;
+            let _ = app_handle.emit("cli-command-complete", true);
+        }
+        _ if !cli.is_ready() && line_str.contains(CACHE_INITIALIZED_MSG) => {
+            println!("{} CLI Ready", CLI_INFO);
+            cli.set_ready();
+            let _ = app_handle.emit("cli-ready", true);
+        }
+        _ if line_str.contains(PROCESSING_COMMAND_MSG) => {
+            cli.set_processing(true);
+        }
+        _ => {}
     }
 }
 
@@ -234,18 +270,62 @@ pub async fn start_codewalker(gta_path: String, app_handle: AppHandle) -> Result
 }
 
 #[tauri::command]
-pub async fn send_command(command: String) -> Result<(), CliError> {
+pub async fn send_command(command: String) -> Result<String, CliError> {
     println!("{} Executing: {}", CLI_INFO, command);
 
-    let cli_process = Arc::clone(&CLI_PROCESS);
-    let mut guard = cli_process
-        .lock()
-        .map_err(|e| CliError::LockError(format!("{} {}", CLI_ERROR, e)))?;
+    {
+        let mut cmd_result = CURRENT_COMMAND.lock().unwrap();
+        *cmd_result = CommandResult::new();
+    }
 
-    let cli = guard.as_mut().ok_or(CliError::NotRunning)?;
+    {
+        let cli_process = Arc::clone(&CLI_PROCESS);
+        let mut guard = cli_process
+            .lock()
+            .map_err(|e| CliError::LockError(format!("{} {}", CLI_ERROR, e)))?;
 
-    cli.send_command(command)?;
-    Ok(())
+        let cli = guard.as_mut().ok_or(CliError::NotRunning)?;
+        cli.send_command(command)?;
+    }
+
+    loop {
+        let output_to_process = {
+            let cmd_result = CURRENT_COMMAND.lock().unwrap();
+            if cmd_result.complete {
+                let output = match (cmd_result.start_index, cmd_result.end_index) {
+                    (Some(start), Some(end)) if start < end => {
+                        cmd_result.output[start+1..end-1].to_vec()
+                    },
+                    _ => cmd_result.output.clone()
+                };
+                
+                println!("{} Output finished {}:{}", CLI_INFO, 
+                    cmd_result.start_index.unwrap_or(0), 
+                    cmd_result.end_index.unwrap_or(0));
+                
+                Some(output)
+            } else {
+                None
+            }
+        };
+
+        if let Some(output) = output_to_process {
+            let filtered_output = output.iter()
+                .map(|line| line.trim())
+                .filter(|line| {
+                    !line.is_empty() && 
+                    !line.starts_with('[') && 
+                    !line.starts_with("Checking")
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            println!("{} Command complete", CLI_INFO);
+            return Ok(filtered_output);
+        }
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
+    }
 }
 
 #[tauri::command]
