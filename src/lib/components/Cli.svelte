@@ -100,8 +100,8 @@
 <div class="cli-container">
     <div class="controls">
         <button onclick={() => codewalkercli.send_command("exportxml -h")}>Test CLI</button>
-        <button onclick={codewalkercli.start}>Start CLI</button>
-        <button onclick={codewalkercli.stop}>Stop CLI</button>
+        <button onclick={() => codewalkercli.start() }>Start CLI</button>
+        <button onclick={() => codewalkercli.stop()}>Stop CLI</button>
         <label>
             <input type="checkbox" bind:checked={autoScroll}>
             Auto-scroll
