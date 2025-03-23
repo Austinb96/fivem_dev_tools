@@ -29,5 +29,9 @@
             <HintPath>CodeWalker\SharpDX.Mathematics.dll</HintPath>
             <Private>true</Private>
         </Reference>
+        <Reference Include="SharpDX">
+            <HintPath>CodeWalker\SharpDX.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
     </ItemGroup>
 </Project>
