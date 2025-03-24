@@ -126,9 +126,12 @@ impl CliProcess {
                 match event {
                     CommandEvent::Stdout(line) => {
                         let line_str = String::from_utf8_lossy(&line);
-                        let mut guard = cli_clone.lock().unwrap();
-                        if let Some(cli) = guard.as_mut() {
-                            handle_stdout(line_str.to_string(), &app_handle, cli);
+                        if let Ok(mut guard) = cli_clone.lock() {
+                            if let Some(cli) = guard.as_mut() {
+                                if let Err(e) = handle_stdout(line_str.to_string(), &app_handle, cli) {
+                                    println!("{} Error handling stdout: {}", CLI_ERROR, e);
+                                }
+                            }
                         }
                     }
                     CommandEvent::Stderr(line) => {
@@ -209,39 +212,45 @@ pub fn validate_gta_path(path: String) -> Result<String, CliError> {
 }
 
 static CLI_PROCESS: Lazy<Arc<Mutex<Option<CliProcess>>>> = Lazy::new(|| Arc::new(Mutex::new(None)));
-fn handle_stdout(line_str: String, app_handle: &AppHandle, cli: &mut CliProcess) {
-    if !line_str.starts_with('[') {
-        app_handle.emit("cli-output", line_str.clone()).unwrap_or_default();
-    }
+    fn handle_stdout(line_str: String, app_handle: &AppHandle, cli: &mut CliProcess) -> Result<(), CliError> {
+        let mut cmd_result = CURRENT_COMMAND
+            .lock()
+            .map_err(|e| CliError::LockError(e.to_string()))?;
+        
+        cmd_result.output.push(line_str.clone());
+        
+        match line_str {
+            _ if line_str.contains(OUTPUT_START_MSG) => {
+                println!("{} Output Start", CLI_INFO);
+                cmd_result.start_index = Some(cmd_result.output.len());
+            }
+            _ if line_str.contains(OUTPUT_END_MSG) => {
+                println!("{} Output End", CLI_INFO);
+                cmd_result.end_index = Some(cmd_result.output.len());
+            }
+            _ if line_str.contains(COMMAND_COMPLETE_MSG) => {
+                cli.set_processing(false);
+                cmd_result.complete = true;
+            }
+            _ if !cli.is_ready() && line_str.contains(CACHE_INITIALIZED_MSG) => {
+                println!("{} CLI Ready", CLI_INFO);
+                cli.set_ready();
+            }
+            _ if line_str.contains(PROCESSING_COMMAND_MSG) => {
+                cli.set_processing(true);
+            }
+            _ => {}
+        }
     
-    let mut cmd_result = CURRENT_COMMAND.lock().unwrap();
-    cmd_result.output.push(line_str.clone());
-
-    match line_str {
-        _ if line_str.contains(OUTPUT_START_MSG) => {
-            println!("{} Output Start", CLI_INFO);
-            cmd_result.start_index = Some(cmd_result.output.len());
+        if !cli.processing_command {
+            print!("{} {}", CLI_INFO, line_str);
+            if let Err(e) = app_handle.emit("cli-output", line_str) {
+                println!("{} Error emitting event: {}", CLI_ERROR, e);
+            }
         }
-        _ if line_str.contains(OUTPUT_END_MSG) => {
-            println!("{} Output End", CLI_INFO);
-            cmd_result.end_index = Some(cmd_result.output.len());
-        }
-        _ if line_str.contains(COMMAND_COMPLETE_MSG) => {
-            cli.set_processing(false);
-            cmd_result.complete = true;
-            let _ = app_handle.emit("cli-command-complete", true);
-        }
-        _ if !cli.is_ready() && line_str.contains(CACHE_INITIALIZED_MSG) => {
-            println!("{} CLI Ready", CLI_INFO);
-            cli.set_ready();
-            let _ = app_handle.emit("cli-ready", true);
-        }
-        _ if line_str.contains(PROCESSING_COMMAND_MSG) => {
-            cli.set_processing(true);
-        }
-        _ => {}
+    
+        Ok(())
     }
-}
 
 #[tauri::command]
 pub async fn start_codewalker(gta_path: String, app_handle: AppHandle) -> Result<(), CliError> {
@@ -274,7 +283,7 @@ pub async fn send_command(command: String) -> Result<String, CliError> {
     println!("{} Executing: {}", CLI_INFO, command);
 
     {
-        let mut cmd_result = CURRENT_COMMAND.lock().unwrap();
+        let mut cmd_result = CURRENT_COMMAND.lock().map_err(|e| CliError::LockError(format!("{} {}", CLI_ERROR, e)))?;
         *cmd_result = CommandResult::new();
     }
 

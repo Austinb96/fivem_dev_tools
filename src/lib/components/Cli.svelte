@@ -13,9 +13,6 @@
     let history_index = $state(-1);
     
     $effect(() => { 
-        if (codewalkercli.error) {
-            scrollToBottom();
-        }
         if (autoScroll && codewalkercli.output.length > 0) {
             scrollToBottom();
         }

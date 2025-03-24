@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { settings } from "./settings.svelte";
 import { toast } from "./toast.svelte";
-import pako from "pako";
 
 const MAX_OUTPUT_LINES = 500;
 class CodeWalkerCli {
@@ -44,9 +43,13 @@ class CodeWalkerCli {
     
     add_output(text: string) {
         this.output.push(text);
+        if (this.output.length > MAX_OUTPUT_LINES) {
+            this.output = this.output.slice(-MAX_OUTPUT_LINES);    
+        }
     }
     
     async send_command(command: string) {
+        console.log("Sending command:", command);
         this.command_history.push(command);
         try {
             const result = await invoke<string>("send_command", {
@@ -92,14 +95,14 @@ class CodeWalkerCli {
         }
     }
     
-    async export_model_xml(model_names: string | string[]): Promise<{[key: string]: string}> {
+    async export_model_xml(model_names: string | string[], output?: string): Promise<{[key: string]: string}> {
         try {
             console.log('Exporting models:', model_names, Array.isArray(model_names));
             if (Array.isArray(model_names)) {
                 const results: {[key: string]: string} = {};
                 
                 const models_str = model_names.join(',');
-                const result = await this.send_command(`exportmodel -n "${models_str}"`);
+                const result = await this.send_command(`exportmodel -n "${models_str}" ${output ? `-o ${output}` : ""}`);
                 
                 console.log("models returned");
                 
@@ -123,7 +126,7 @@ class CodeWalkerCli {
                 return results;
             }
             
-            const result = await this.send_command(`exportmodel -n "${model_names}"`);
+            const result = await this.send_command(`exportmodel -n "${model_names}" ${output ? `-o ${output}` : ""}`);
             // Handle single model case with same parsing
             const parts = result.split('---MODEL:');
             if (parts.length > 1) {
