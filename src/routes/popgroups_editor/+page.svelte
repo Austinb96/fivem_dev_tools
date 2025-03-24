@@ -40,11 +40,10 @@ async function handleFileInput() {
             }
             loaded_file = selected;
             loading = true;
-            const file_ext = selected[0].split('.').pop();
+            const file_ext = selected.split(".").pop();
             let xml = ""
             if (file_ext ==="xml"){
                 xml = await readTextFile(selected);
-                
             } else{
                 const save_path = `${settings.save_path}\\popgroups.xml`;
                 const result = await codewalkercli.export_xml(selected, save_path, "pso");
