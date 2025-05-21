@@ -1,6 +1,6 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
-    import { settings } from "../../settings.svelte";
+    import { settings } from "$core/settings.svelte";
     import FolderNode from "$lib/components/FolderNode.svelte";
     import type { FolderTree, VectorInfo } from "$types/types";
     import FileNode from "$lib/components/FileNode.svelte";

@@ -1,9 +1,9 @@
 <script lang="ts">
     import { open } from '@tauri-apps/plugin-dialog';
-    import { settings } from "../../settings.svelte";
+    import { settings } from "$core/settings.svelte";
     import Cli from "$lib/components/Cli.svelte";
     import { invoke } from '@tauri-apps/api/core';
-    import { toast } from '../../toast.svelte';
+    import { toast } from '$core/toast.svelte';
 
     async function selectBasePath() {
         const folder = await open({

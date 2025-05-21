@@ -1,5 +1,5 @@
 import { load } from "@tauri-apps/plugin-store";
-import { toast } from "./toast.svelte";
+import { toast } from "$core/toast.svelte";
 
 //TODO this can prob be done a lot cleaner and easier
 class Settings {

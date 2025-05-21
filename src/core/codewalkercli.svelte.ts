@@ -1,6 +1,6 @@
+import { toast } from "$core/toast.svelte";
 import { invoke } from "@tauri-apps/api/core";
-import { settings } from "./settings.svelte";
-import { toast } from "./toast.svelte";
+import { settings } from "$core/settings.svelte";
 
 const MAX_OUTPUT_LINES = 500;
 class CodeWalkerCli {

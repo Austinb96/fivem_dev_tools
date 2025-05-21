@@ -1,10 +1,10 @@
 <script lang="ts">
 import { ItemType, type PopGroup } from "$types/types";
 import { open } from '@tauri-apps/plugin-dialog';
-import { codewalkercli } from "../../codewalkercli.svelte";
-import { settings } from "../../settings.svelte";
+import { codewalkercli } from "$core/codewalkercli.svelte";
+import { settings } from "$core/settings.svelte";
 import { invoke } from "@tauri-apps/api/core";
-import { toast } from "../../toast.svelte";
+import { toast } from "$core/toast.svelte";
 import { readTextFile } from "@tauri-apps/plugin-fs";
 import { openPath } from "@tauri-apps/plugin-opener";
 
@@ -145,7 +145,7 @@ async function downloadXML() {
         }
         
         const ymt_path = `${settings.save_path}\\popgroups.ymt`;
-        const result = codewalkercli.import_xml(`${settings.save_path}\\popgroups.xml`, ymt_path, "pso");
+        const result = await codewalkercli.import_xml(`${settings.save_path}\\popgroups.xml`, ymt_path, "pso");
         
         if (result){
             toast.add({

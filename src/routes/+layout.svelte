@@ -4,8 +4,8 @@
     import Updater from "$lib/components/Updater.svelte";
     import { listen, type UnlistenFn } from "@tauri-apps/api/event";
     import { onMount } from "svelte";
-    import {  codewalkercli } from "../codewalkercli.svelte";
-    import { settings } from "../settings.svelte";
+    import {  codewalkercli } from "$core/codewalkercli.svelte";
+    import { settings } from "$core/settings.svelte";
     
     onMount(() => {
         const listeners = [] as UnlistenFn[];
@@ -42,10 +42,15 @@
 <style>
     #container {
         display: flex;
+        height: 100%;
+        overflow: hidden;
     }
     
     #content {
         flex: 1;
-        padding: 1rem;
+        height: 100%;
+        overflow: hidden;
+        overflow-y: scroll;
+        padding-left: 5px;
     }
 </style>

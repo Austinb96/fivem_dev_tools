@@ -1,8 +1,8 @@
 <script lang="ts">
     import { invoke } from "@tauri-apps/api/core";
-    import { settings } from "../../settings.svelte";
+    import { settings } from "$core/settings.svelte";
     import { SUPPORTED_META, diffTool } from "../../diffEditor.svelte";
-    import { toast } from "../../toast.svelte";
+    import { toast } from "$core/toast.svelte";
 
     type DuplicateFileEntry = [string, string[]];
     
